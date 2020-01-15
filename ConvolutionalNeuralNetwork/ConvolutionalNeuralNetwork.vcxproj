@@ -79,6 +79,17 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <CudaCompile Include="kernel.cu" />
+	<CudaCompile Include="Random.cu" />
+    <CudaCompile Include="Pooling.cu" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="Layer.h" />
+    <ClInclude Include="Random.h" />
+    <ClInclude Include="RNG.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="Convolutional.cu" />
+    <ClCompile Include="FullyConnected.cu" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
