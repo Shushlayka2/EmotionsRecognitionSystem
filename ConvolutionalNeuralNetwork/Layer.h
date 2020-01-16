@@ -1,18 +1,13 @@
 #pragma once
 
-//#include <Eigen/Core>
 #include <vector>
 #include "RNG.h"
 
-//using namespace Eigen;
 using namespace std;
 
 class Layer
 {
 protected:
-	//typedef Eigen::Matrix<float, Dynamic, Dynamic> Matrix;
-	//typedef Eigen::Matrix<float, Dynamic, 1> Vector;
-
 	const int in_size;
 	const int out_size;
 
@@ -24,10 +19,10 @@ public:
 	
 	virtual ~Layer();
 
-	int in_size() const { return in_size; }
-	int out_size() const { return out_size; }
+	int get_in_size() const { return in_size; }
+	int get_out_size() const { return out_size; }
 
-	virtual void init(const float mu, const float sigma, RNG& rng) = 0;
+	virtual void init(const float mu, const float sigma) = 0;
 	virtual void forward(const float* prev_layer_output) = 0;
 
 	virtual const float* output() const = 0;

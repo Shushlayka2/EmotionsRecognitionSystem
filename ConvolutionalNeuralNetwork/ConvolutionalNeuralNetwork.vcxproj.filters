@@ -5,6 +5,11 @@
     <CudaCompile Include="Pooling.cu">
       <Filter>Layer</Filter>
     </CudaCompile>
+    <CudaCompile Include="Random.cu">
+      <Filter>Utilities</Filter>
+    </CudaCompile>
+    <CudaCompile Include="Convolutional.cu" />
+    <CudaCompile Include="FullyConnected.cu" />
   </ItemGroup>
   <ItemGroup>
     <Filter Include="Header Files">
@@ -16,6 +21,9 @@
     <Filter Include="Utilities">
       <UniqueIdentifier>{dde51afd-c2d6-4a4c-b824-49753eee501e}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Header Files\Utilities">
+      <UniqueIdentifier>{36e091ba-d890-43fc-8ebc-a909c8c3b453}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Layer.h">
@@ -24,19 +32,17 @@
     <ClInclude Include="RNG.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="Random.h">
+    <ClInclude Include="Exception.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-  </ItemGroup>
-  <ItemGroup>
-    <ClCompile Include="Convolutional.cu">
-      <Filter>Layer</Filter>
-    </ClCompile>
-    <ClCompile Include="FullyConnected.cu">
-      <Filter>Layer</Filter>
-    </ClCompile>
-    <ClCompile Include="Random.cu">
-      <Filter>Utilities</Filter>
-    </ClCompile>
+    <ClInclude Include="Matrix.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Random.h">
+      <Filter>Header Files\Utilities</Filter>
+    </ClInclude>
+    <ClInclude Include="ImageHandler.h">
+      <Filter>Header Files\Utilities</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>
