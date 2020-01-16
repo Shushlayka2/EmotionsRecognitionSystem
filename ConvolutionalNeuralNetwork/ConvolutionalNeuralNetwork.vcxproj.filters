@@ -1,48 +1,86 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <Project ToolsVersion="Current" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup>
-    <CudaCompile Include="kernel.cu" />
     <CudaCompile Include="Pooling.cu">
-      <Filter>Layer</Filter>
+      <Filter>Source Files\Models\Layers</Filter>
     </CudaCompile>
     <CudaCompile Include="Random.cu">
-      <Filter>Utilities</Filter>
+      <Filter>Source Files\Utilities</Filter>
     </CudaCompile>
-    <CudaCompile Include="Convolutional.cu" />
-    <CudaCompile Include="FullyConnected.cu" />
+    <CudaCompile Include="Convolutional.cu">
+      <Filter>Source Files\Models\Layers</Filter>
+    </CudaCompile>
+    <CudaCompile Include="FullyConnected.cu">
+      <Filter>Source Files\Models\Layers</Filter>
+    </CudaCompile>
+    <CudaCompile Include="kernel.cu">
+      <Filter>Source Files</Filter>
+    </CudaCompile>
   </ItemGroup>
   <ItemGroup>
     <Filter Include="Header Files">
       <UniqueIdentifier>{4cf85720-56c3-42ad-bf10-258e782e36a2}</UniqueIdentifier>
     </Filter>
-    <Filter Include="Layer">
-      <UniqueIdentifier>{1d8028cf-b9ff-48ae-9b2e-126ab6909f84}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="Utilities">
-      <UniqueIdentifier>{dde51afd-c2d6-4a4c-b824-49753eee501e}</UniqueIdentifier>
-    </Filter>
     <Filter Include="Header Files\Utilities">
       <UniqueIdentifier>{36e091ba-d890-43fc-8ebc-a909c8c3b453}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Header Files\Models">
+      <UniqueIdentifier>{f42fa60a-8646-4666-aad3-55bc5d767018}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files">
+      <UniqueIdentifier>{e80fae31-5bc6-4bfd-bdef-8a29d1f5b54d}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\Utilities">
+      <UniqueIdentifier>{dde51afd-c2d6-4a4c-b824-49753eee501e}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\Models">
+      <UniqueIdentifier>{43b32b22-c9c5-4172-b9f3-a54062780ef9}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\Models\Layers">
+      <UniqueIdentifier>{1d8028cf-b9ff-48ae-9b2e-126ab6909f84}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="Layer.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="RNG.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="Exception.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="Matrix.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="Random.h">
       <Filter>Header Files\Utilities</Filter>
     </ClInclude>
+    <ClInclude Include="Trainer.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="ConfigHandler.h">
+      <Filter>Header Files\Utilities</Filter>
+    </ClInclude>
+    <ClInclude Include="CustomException.h">
+      <Filter>Header Files\Utilities</Filter>
+    </ClInclude>
     <ClInclude Include="ImageHandler.h">
       <Filter>Header Files\Utilities</Filter>
     </ClInclude>
+    <ClInclude Include="Chameleon.h">
+      <Filter>Header Files\Models</Filter>
+    </ClInclude>
+    <ClInclude Include="Layer.h">
+      <Filter>Header Files\Models</Filter>
+    </ClInclude>
+    <ClInclude Include="Matrix.h">
+      <Filter>Header Files\Models</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="ConfigHandler.cpp">
+      <Filter>Source Files\Utilities</Filter>
+    </ClCompile>
+    <ClCompile Include="CustomException.cpp">
+      <Filter>Source Files\Utilities</Filter>
+    </ClCompile>
+    <ClCompile Include="ImageHandler.cpp">
+      <Filter>Source Files\Utilities</Filter>
+    </ClCompile>
+    <ClCompile Include="Chameleon.cpp">
+      <Filter>Source Files\Models</Filter>
+    </ClCompile>
   </ItemGroup>
 </Project>

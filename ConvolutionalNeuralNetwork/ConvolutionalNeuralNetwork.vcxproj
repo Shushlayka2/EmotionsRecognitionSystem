@@ -87,12 +87,21 @@
     <CudaCompile Include="FullyConnected.cu" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="Exception.h" />
+    <ClInclude Include="Chameleon.h" />
+    <ClInclude Include="ConfigHandler.h" />
+    <ClInclude Include="CustomException.h" />
     <ClInclude Include="ImageHandler.h" />
     <ClInclude Include="Layer.h" />
     <ClInclude Include="Random.h" />
     <ClInclude Include="RNG.h" />
     <ClInclude Include="Matrix.h" />
+    <ClInclude Include="Trainer.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="Chameleon.cpp" />
+    <ClCompile Include="ConfigHandler.cpp" />
+    <ClCompile Include="CustomException.cpp" />
+    <ClCompile Include="ImageHandler.cpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

@@ -1,7 +1,8 @@
 #include "cuda_runtime.h"
 #include "device_launch_parameters.h"
 //#include "Random.h"
-//#include "ImageHandler.h"
+#include "ImageHandler.h"
+#include "Matrix.h"
 
 #include <malloc.h>
 #include <iostream>
@@ -17,18 +18,17 @@ int main()
 		printf("%f\n", arr[i]);
 	}*/
 
-	/*ImageHandler handler;
-	int rows, cols;
-	float** matrix = handler.convert(0, 0, rows, cols);
-	for (int i = 0; i < rows; i++)
+	ImageHandler handler;
+	Matrix matrix = handler.convert(0, 0);
+	for (int i = 0; i < matrix.rows_count; i++)
 	{
-		for (int j = 0; j < cols; j++)
+		for (int j = 0; j < matrix.cols_count; j++)
 		{
-			printf("%f ", matrix[i][j]);
+			printf("%f ", matrix.elements[i][j]);
 		}
 		printf("\n");
 	}
-	printf("%i %i", rows, cols);*/
+	printf("%i %i", matrix.rows_count, matrix.cols_count);
 
 	return 0;
 }

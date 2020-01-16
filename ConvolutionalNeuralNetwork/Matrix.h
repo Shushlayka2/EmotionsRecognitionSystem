@@ -2,7 +2,7 @@
 
 struct Matrix
 {
-	float* arr;
+	float** elements;
 	unsigned int rows_count;
 	unsigned int cols_count;
 };
