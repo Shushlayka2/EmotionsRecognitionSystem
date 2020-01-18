@@ -82,9 +82,9 @@
   <ItemGroup>
     <CudaCompile Include="kernel.cu" />
     <CudaCompile Include="Random.cu" />
-    <CudaCompile Include="Pooling.cu" />
+    <CudaCompile Include="PoolingLayer.cu" />
     <CudaCompile Include="ConvolutionalLayer.cu" />
-    <CudaCompile Include="FullyConnected.cu" />
+    <CudaCompile Include="FullyConnectedLayer.cu" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Chameleon.h" />
@@ -92,10 +92,9 @@
     <ClInclude Include="ConvolutionalLayer.h" />
     <ClInclude Include="CustomException.h" />
     <ClInclude Include="ImageHandler.h" />
-    <ClInclude Include="Layer.h" />
     <ClInclude Include="Network.h" />
+    <ClInclude Include="PoolingLayer.h" />
     <ClInclude Include="Random.h" />
-    <ClInclude Include="RNG.h" />
     <ClInclude Include="MatrixBlock.h" />
     <ClInclude Include="Trainer.h" />
   </ItemGroup>

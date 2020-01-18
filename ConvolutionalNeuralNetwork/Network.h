@@ -4,14 +4,16 @@
 
 #include "MatrixBlock.h"
 #include "ConfigHandler.h"
+#include "ConvolutionalLayer.h"
 
 class Network {
 private:
-	std::vector<MatrixBlock> feature_maps;
-	std::vector<MatrixBlock> pooled_feature_maps;
 	ConfigHandler configurationHandler;
+	int convolutional_layers_count;
 
 public:
+	std::vector<ConvolutionalLayer> convolutionalLayers;
+
 	Network(ConfigHandler& configurationHandler);
 
 	void run(MatrixBlock& image_matrix_block);

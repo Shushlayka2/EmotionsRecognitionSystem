@@ -1,4 +1,5 @@
 train_chunk = 1
+convolution_layers_count = 3
 amount_of_filters = 2
 filter_size = 3
 pooling_filters_size = 2
