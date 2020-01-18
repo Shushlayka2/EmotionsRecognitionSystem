@@ -7,14 +7,14 @@
     <CudaCompile Include="Random.cu">
       <Filter>Source Files\Utilities</Filter>
     </CudaCompile>
-    <CudaCompile Include="Convolutional.cu">
-      <Filter>Source Files\Models\Layers</Filter>
-    </CudaCompile>
     <CudaCompile Include="FullyConnected.cu">
       <Filter>Source Files\Models\Layers</Filter>
     </CudaCompile>
     <CudaCompile Include="kernel.cu">
       <Filter>Source Files</Filter>
+    </CudaCompile>
+    <CudaCompile Include="ConvolutionalLayer.cu">
+      <Filter>Source Files\Models\Layers</Filter>
     </CudaCompile>
   </ItemGroup>
   <ItemGroup>
@@ -38,6 +38,9 @@
     </Filter>
     <Filter Include="Source Files\Models\Layers">
       <UniqueIdentifier>{1d8028cf-b9ff-48ae-9b2e-126ab6909f84}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header Files\Models\Layers">
+      <UniqueIdentifier>{198314e5-4050-417c-9a0b-61070afd4180}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>
@@ -65,7 +68,13 @@
     <ClInclude Include="Layer.h">
       <Filter>Header Files\Models</Filter>
     </ClInclude>
-    <ClInclude Include="Matrix.h">
+    <ClInclude Include="ConvolutionalLayer.h">
+      <Filter>Header Files\Models\Layers</Filter>
+    </ClInclude>
+    <ClInclude Include="MatrixBlock.h">
+      <Filter>Header Files\Models</Filter>
+    </ClInclude>
+    <ClInclude Include="Network.h">
       <Filter>Header Files\Models</Filter>
     </ClInclude>
   </ItemGroup>
@@ -82,5 +91,17 @@
     <ClCompile Include="Chameleon.cpp">
       <Filter>Source Files\Models</Filter>
     </ClCompile>
+    <ClCompile Include="Trainer.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="MatrixBlock.cpp">
+      <Filter>Source Files\Models</Filter>
+    </ClCompile>
+    <ClCompile Include="Network.cpp">
+      <Filter>Source Files\Models</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <Text Include="config.txt" />
   </ItemGroup>
 </Project>

@@ -17,6 +17,8 @@ std::string trim(std::string const& source, char const* delims = " \t\r\n") {
     return result;
 }
 
+ConfigHandler::ConfigHandler() {}
+
 ConfigHandler::ConfigHandler(std::string const& configFile) {
     std::ifstream file(configFile);
 

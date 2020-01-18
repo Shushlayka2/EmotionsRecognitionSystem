@@ -1,10 +1,6 @@
 #pragma once
 
-class Trainer
-{
+class Trainer {
 public:
-	void train()
-	{
-
-	}
+	void train();
 };

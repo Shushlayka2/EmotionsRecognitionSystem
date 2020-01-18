@@ -14,18 +14,21 @@ std::string ImageHandler::convert_id_to_file(const int id) {
 	return id_str;
 }
 
-Matrix& ImageHandler::convert(const int num, const int id) {
-	Matrix matrix;
+void ImageHandler::convert(MatrixBlock& matrix_block, const int num, const int id) {
 	cv::Mat image = cv::imread(directory_path + "\\" + std::to_string(num) + "\\" + convert_id_to_file(id));
-	matrix.rows_count = image.rows; matrix.cols_count = image.cols;
-	matrix.elements = new float* [matrix.rows_count];
-	for (int i = 0; i < matrix.rows_count; i++)
+	matrix_block.cols_count = image.cols; matrix_block.rows_count = image.rows;
+	matrix_block.matrixes_size = image.cols * image.rows; matrix_block.depth = image.dims - 1;
+	matrix_block.matrixes = new float* [matrix_block.depth];
+
+	for (int i = 0; i < matrix_block.depth; i++)
 	{
-		matrix.elements[i] = new float[matrix.cols_count];
-		for (int j = 0; j < matrix.cols_count; j++)
+		matrix_block.matrixes[i] = new float[matrix_block.matrixes_size];
+		for (int j = 0; j < matrix_block.rows_count; j++)
 		{
-			matrix.elements[i][j] = (float)image.data[i * matrix.rows_count + j];
+			for (int k = 0; k < matrix_block.cols_count; k++)
+			{
+				matrix_block.matrixes[i][j * image.cols + k] = (float)image.data[i * image.rows * image.cols + j * image.cols + k];
+			}
 		}
 	}
-	return matrix;
 }

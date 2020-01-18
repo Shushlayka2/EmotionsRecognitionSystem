@@ -1,34 +1,42 @@
-#include "cuda_runtime.h"
-#include "device_launch_parameters.h"
-//#include "Random.h"
-#include "ImageHandler.h"
-#include "Matrix.h"
+#include "Trainer.h"
+#include "CustomException.h"
 
-#include <malloc.h>
 #include <iostream>
-#include <stdio.h>
+
+//class Test {
+//public:
+//	int** arr;
+//	Test() {
+//		arr = new int*[1];
+//		arr[0] = new int[1];
+//		arr[0][0] = 1;
+//	}
+//};
+//
+//class Test2 {
+//public:
+//	Test test;
+//	Test2() {
+//		test = Test();
+//	}
+//};
+//
+//int main()
+//{
+//	Test2 test2 = Test2();
+//	std::cout << test2.test.arr[0][0];
+//}
 
 int main()
 {
-	/*float* arr;
-	arr = (float*)std::malloc(10);
-	set_normal_random(arr, 10);
-	for (int i = 0; i < 10; i++)
+	try
 	{
-		printf("%f\n", arr[i]);
-	}*/
-
-	ImageHandler handler;
-	Matrix matrix = handler.convert(0, 0);
-	for (int i = 0; i < matrix.rows_count; i++)
-	{
-		for (int j = 0; j < matrix.cols_count; j++)
-		{
-			printf("%f ", matrix.elements[i][j]);
-		}
-		printf("\n");
+		Trainer trainer;
+		trainer.train();
 	}
-	printf("%i %i", matrix.rows_count, matrix.cols_count);
-
+	catch (CustomException ex)
+	{
+		printf("Exception appeared! See log file!");
+	}
 	return 0;
 }

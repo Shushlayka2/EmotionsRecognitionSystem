@@ -5,15 +5,15 @@
 class Chameleon {
 public:
     Chameleon() {};
-    Chameleon(const int);
-    Chameleon(const float);
-    Chameleon(const std::string&);
-    Chameleon(const Chameleon&);
+    Chameleon(const int i);
+    Chameleon(const float f);
+    Chameleon(const std::string& s);
+    Chameleon(const Chameleon& other);
 
-    Chameleon& operator=(int);
-    Chameleon& operator=(float);
-    Chameleon& operator=(std::string const&);
-    Chameleon& operator=(Chameleon const&);
+    Chameleon& operator=(int i);
+    Chameleon& operator=(float f);
+    Chameleon& operator=(std::string const& s);
+    Chameleon& operator=(Chameleon const& other);
 
     operator int() const;
     operator float() const;

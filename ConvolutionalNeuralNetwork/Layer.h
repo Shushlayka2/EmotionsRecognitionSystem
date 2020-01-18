@@ -1,12 +1,10 @@
 #pragma once
 
 #include <vector>
+
 #include "RNG.h"
 
-using namespace std;
-
-class Layer
-{
+class Layer {
 protected:
 	const int in_size;
 	const int out_size;
@@ -14,8 +12,7 @@ protected:
 public:
 	Layer(const int in_size, const int out_size) :
 		in_size(in_size),
-		out_size(out_size)
-	{}
+		out_size(out_size) {}
 	
 	virtual ~Layer();
 
@@ -30,7 +27,7 @@ public:
 	virtual void backprop(const float* prev_layer_output, const float* next_layer_data) = 0;
 	virtual const float* backprop_data() const = 0;
 
-	virtual vector<float> get_parameter() const = 0;
-	virtual void set_parameters(const vector<float> param) = 0;
-	virtual vector<float> get_derivatives() const = 0;
+	virtual std::vector<float> get_parameter() const = 0;
+	virtual void set_parameters(const std::vector<float> param) = 0;
+	virtual std::vector<float> get_derivatives() const = 0;
 };

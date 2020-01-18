@@ -1,11 +1,11 @@
+#include <time.h>
+#include <curand.h>
+#include <curand_kernel.h>
+
 #include "Random.h"
 #include "cuda_runtime.h"
 #include "device_launch_parameters.h"
-#include "Exception.h"
-#include <time.h>
-#include <curand.h>
-#include<iostream>
-#include <curand_kernel.h>
+#include "CustomException.h"
 
 #define DoublePi 6.28318f
 #define BLOCK_SIZE 256
@@ -33,19 +33,11 @@ void set_normal_random(float* arr, const int arr_size, const float mu, const flo
 	float* arr_device;
 	const int GRID_SIZE = half_arr_size / BLOCK_SIZE + (half_arr_size % BLOCK_SIZE != 0 ? 1 : 0);
 
-	try
-	{
-		cudaMalloc((void**)&arr_device, sizeof(float) * half_arr_size * 2);
+	cudaMalloc((void**)&arr_device, sizeof(float) * half_arr_size * 2);
 
-		generate_normal_random_vector << <GRID_SIZE, BLOCK_SIZE >> > (arr_device, half_arr_size * 2, mu, sigma, time(NULL));
-		cudacall(cudaGetLastError());
+	unsigned int seed = (unsigned int)time(NULL);
+	generate_normal_random_vector << <GRID_SIZE, BLOCK_SIZE >> > (arr_device, half_arr_size * 2, mu, sigma, seed);
+	cudacall(cudaGetLastError());
 
-		cudaMemcpy(arr, arr_device, sizeof(float) * arr_size, cudaMemcpyDeviceToHost);
-	}
-	catch (custom_exception & ex)
-	{
-		ex.destroy();
-		printf("Exception appeared! See log file!");
-		//TODO: Complete program?
-	}
+	cudaMemcpy(arr, arr_device, sizeof(float) * arr_size, cudaMemcpyDeviceToHost);
 }

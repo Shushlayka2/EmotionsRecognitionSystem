@@ -1,0 +1,4 @@
+train_chunk = 1
+amount_of_filters = 2
+filter_size = 2
+pooling_filters_size = 2
