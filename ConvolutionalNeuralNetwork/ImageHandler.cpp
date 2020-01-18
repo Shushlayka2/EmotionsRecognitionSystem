@@ -18,16 +18,15 @@ void ImageHandler::convert(MatrixBlock& matrix_block, const int num, const int i
 	cv::Mat image = cv::imread(directory_path + "\\" + std::to_string(num) + "\\" + convert_id_to_file(id));
 	matrix_block.cols_count = image.cols; matrix_block.rows_count = image.rows;
 	matrix_block.matrixes_size = image.cols * image.rows; matrix_block.depth = image.dims - 1;
-	matrix_block.matrixes = new float* [matrix_block.depth];
+	matrix_block.data = new float [matrix_block.depth * matrix_block.matrixes_size];
 
 	for (int i = 0; i < matrix_block.depth; i++)
 	{
-		matrix_block.matrixes[i] = new float[matrix_block.matrixes_size];
 		for (int j = 0; j < matrix_block.rows_count; j++)
 		{
 			for (int k = 0; k < matrix_block.cols_count; k++)
 			{
-				matrix_block.matrixes[i][j * image.cols + k] = (float)image.data[i * image.rows * image.cols + j * image.cols + k];
+				matrix_block.data[i * matrix_block.matrixes_size + j * matrix_block.cols_count + k] = (float)image.data[i * image.rows * image.cols + j * image.cols + k];
 			}
 		}
 	}

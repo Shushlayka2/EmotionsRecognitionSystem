@@ -10,6 +10,8 @@
 #define DoublePi 6.28318f
 #define BLOCK_SIZE 256
 
+unsigned int seed = time(NULL);
+
 __global__ void generate_normal_random_vector(float* arr, const int arr_size, const float mu, const float sigma, const unsigned int seed)
 {
 	curandState_t state;
@@ -35,9 +37,10 @@ void set_normal_random(float* arr, const int arr_size, const float mu, const flo
 
 	cudaMalloc((void**)&arr_device, sizeof(float) * half_arr_size * 2);
 
-	unsigned int seed = (unsigned int)time(NULL);
 	generate_normal_random_vector << <GRID_SIZE, BLOCK_SIZE >> > (arr_device, half_arr_size * 2, mu, sigma, seed);
 	cudacall(cudaGetLastError());
 
 	cudaMemcpy(arr, arr_device, sizeof(float) * arr_size, cudaMemcpyDeviceToHost);
+
+	cudaFree(arr_device);
 }

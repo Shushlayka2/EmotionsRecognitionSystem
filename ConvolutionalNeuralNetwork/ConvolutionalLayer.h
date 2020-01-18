@@ -12,5 +12,5 @@ public:
 
 	MatrixBlock get_feature_map();
 
-	void convolve();
+	void forward();
 };
