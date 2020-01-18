@@ -1,11 +1,14 @@
 #include <iostream>
 
+#include "Random.h"
+#include "ConvolutionalLayer.h"
 #include "cuda_runtime.h"
 #include "device_launch_parameters.h"
-#include "ConvolutionalLayer.h"
-#include "Random.h"
 
-__global__ void cuda_convolve(float** matrixes, float** filters, float** result, const int cols, const int rows, const int depth, const int filter_size)
+texture<float, 2, cudaReadModeElementType> InputMatrixesRef;
+texture<float, 2, cudaReadModeElementType> FiltersRef;
+
+__global__ void cuda_convolve(float** result, const int cols, const int rows, const int depth, const int filter_size)
 {
 	int x = blockDim.x * blockIdx.x + threadIdx.x;
 	int y = blockDim.y * blockIdx.y + threadIdx.y;
@@ -24,11 +27,12 @@ __global__ void cuda_convolve(float** matrixes, float** filters, float** result,
 			{
 				int matrix_position = (y + i) * cols + (x + j);
 				int filter_position = i * filter_size + j;
-				result[z][feature_map_position] += matrixes[blockIdx.z][matrix_position] * filters[threadIdx.z][filter_position];
+				result[z][feature_map_position] += tex2D(InputMatrixesRef, matrix_position, blockIdx.z) *
+					tex2D(FiltersRef, filter_position, threadIdx.z);
 			}
 		}
 		//test
-		//printf("%u %u %u: %f\n", x, y, z, result[z][feature_map_position]);
+		printf("%u %u %u: %f\n", x, y, z, result[z][feature_map_position]);
 	}
 }
 
@@ -39,8 +43,8 @@ ConvolutionalLayer::ConvolutionalLayer(MatrixBlock& input_matrixes, const int fi
 	set_normal_random(random_elements, filter_elements_count);
 	
 	//test
-	/*for (int i = 0; i < filter_elements_count; i++)
-		random_elements[i] = i;*/
+	for (int i = 0; i < filter_elements_count; i++)
+		random_elements[i] = i;
 	
 	filters = MatrixBlock(random_elements, filter_size, filter_size, filters_count);
 }
@@ -93,12 +97,15 @@ void ConvolutionalLayer::convolve() {
 		cudaMemcpy(feature_map_device, feature_map_host_pointer, sizeof(float*) * feature_map_depth, cudaMemcpyHostToDevice);
 	}
 
-	dim3 threadsPerBlock = dim3(filters.cols_count, filters.rows_count, filters.depth);
-	dim3 blocksPerGrid = dim3(input_matrixes.cols_count / filters.cols_count + (input_matrixes.cols_count % filters.cols_count == 0 ? 0 : 1),
-		input_matrixes.rows_count / filters.rows_count + (input_matrixes.rows_count % filters.rows_count == 0 ? 0 : 1),
+	cudaBindTexture2D(NULL, &InputMatrixesRef, matrixes_device, &InputMatrixesRef.channelDesc, input_matrixes.matrixes_size, input_matrixes.depth, sizeof(float) * input_matrixes.matrixes_size);
+	cudaBindTexture2D(NULL, &FiltersRef, filters_device, &FiltersRef.channelDesc, filters.matrixes_size, filters.depth, sizeof(float) * filters.matrixes_size);
+
+	dim3 threadsPerBlock = dim3(10, 10, filters.depth);
+	dim3 blocksPerGrid = dim3(input_matrixes.cols_count / 10 + (input_matrixes.cols_count % 10 == 0 ? 0 : 1),
+		input_matrixes.rows_count / 10 + (input_matrixes.rows_count % 10 == 0 ? 0 : 1),
 		input_matrixes.depth);
 
-	cuda_convolve << <blocksPerGrid, threadsPerBlock>> > (matrixes_device, filters_device, feature_map_device, input_matrixes.cols_count, input_matrixes.rows_count, feature_map_depth, filters.cols_count);
+	cuda_convolve << <blocksPerGrid, threadsPerBlock>> > (feature_map_device, input_matrixes.cols_count, input_matrixes.rows_count, feature_map_depth, filters.cols_count);
 	
 	for (int i = 0; i < feature_map_depth; i++)
 	{
