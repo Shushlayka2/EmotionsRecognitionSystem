@@ -5,6 +5,7 @@
 #include "MatrixBlock.h"
 #include "ConfigHandler.h"
 #include "ConvolutionalLayer.h"
+#include "FullyConnectedLayer.h"
 
 class Network {
 private:
@@ -15,6 +16,7 @@ private:
 
 public:
 	std::vector<ConvolutionalLayer> convolutionalLayers;
+	std::vector<FullyConnectedLayer> fullyConnectedLayers;
 
 	Network(ConfigHandler& configurationHandler);
 

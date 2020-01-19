@@ -1,6 +1,5 @@
 #include <malloc.h>
 #include <iostream>
-#include <cublas_v2.h>
 
 #include "Random.h"
 #include "FullyConnectedLayer.h"
@@ -76,6 +75,8 @@ float* FullyConnectedLayer::forward(float* prev_layer_data) {
 	float* inputs_device;
 	float* outputs_device;
 	float* weights_device;
+	cublasHandle_t handle;
+	cublasCreate(&handle);
 	rsize_t size = in_size * sizeof(float);
 	cudaMalloc((void**)&inputs_device, size);
 	cudaMalloc((void**)&weights_device, out_size * size);
@@ -90,41 +91,43 @@ float* FullyConnectedLayer::forward(float* prev_layer_data) {
 
 	cuda_multiply_matrixes << <blocksPerGrid , threadsPerBlock >> > (weights_device, in_size, out_size);
 	outputs_device = sum_particles_host(weights_device, in_size, out_size, BLOCK_SIZE);
-	activate_softmax(outputs_device, outputs);
+	add_biases(outputs_device, handle);
+	activate_softmax(outputs_device, outputs, handle);
 
 	cudaUnbindTexture(InputsRef);
 	cudaFree(inputs_device);
 	cudaFree(outputs_device);
 	cudaFree(weights_device);
+	cublasDestroy(handle);
 
 	return outputs;
 }
 
-void FullyConnectedLayer::activate_softmax(float* outputs_device, float* outputs) {
+void FullyConnectedLayer::add_biases(float* outputs_device, cublasHandle_t& handle) {
 	float alpha = 1.0f;
+	float* biases_vector_device;
+	cublasSetVector(out_size, sizeof(float), biases_vector, 1, biases_vector_device, 1);
+	cublasSaxpy(handle, out_size, &alpha, biases_vector_device, 1, outputs_device, 1);
+	cudaFree(biases_vector_device);
+}
+
+void FullyConnectedLayer::activate_softmax(float* outputs_device, float* outputs, cublasHandle_t& handle) {
 	float sum = 0.0f;
-	cublasHandle_t handle;
-	cublasCreate(&handle);
 	float* helper_vector_device;
 	dim3 threadsPerBlock = 256;
 	dim3 blocksPerGrid = out_size / 256 + (out_size % 256 == 0 ? 0 : 1);
+	
 	cudaMalloc((void**)&helper_vector_device, out_size * sizeof(float));
-	cublasSetVector(out_size, sizeof(float), biases_vector, 1, helper_vector_device, 1);
-	
-	cublasSaxpy(handle, out_size, &alpha, helper_vector_device, 1, outputs_device, 1);
-	
 	cudaMemcpy(outputs, outputs_device, out_size * sizeof(float), cudaMemcpyDeviceToHost);
-	float max_val = find_max(outputs, out_size);
-
-	cuda_exp_vector_generate << <blocksPerGrid, threadsPerBlock >> > (outputs_device, helper_vector_device, max_val, out_size);
-	cudaDeviceSynchronize();
-	cublasSasum(handle, out_size, helper_vector_device, 1, &sum);
 	
+	float max_val = find_max(outputs, out_size);
+	cuda_exp_vector_generate << <blocksPerGrid, threadsPerBlock >> > (outputs_device, helper_vector_device, max_val, out_size);
+	cublasSasum(handle, out_size, helper_vector_device, 1, &sum);
 	sum = log(sum);
-
 	cuda_softmax << <blocksPerGrid, threadsPerBlock >> > (outputs_device, max_val, sum, out_size);
 	
 	cudaMemcpy(outputs, outputs_device, out_size * sizeof(float), cudaMemcpyDeviceToHost);
+	
 	cudaFree(helper_vector_device);
 }
 

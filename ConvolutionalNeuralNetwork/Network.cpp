@@ -17,6 +17,7 @@ void Network::run(MatrixBlock& image_matrix_block) {
 	if (amount_of_filters > 10)
 		throw_line("Amout of filters too large! Please, correct configuration!");
 	MatrixBlock current_matrix_block = image_matrix_block;
+	float* current_input_vector;
 	if (convolutionalLayers.size() == 0)
 	{
 		//First time run
@@ -52,7 +53,7 @@ void Network::run(MatrixBlock& image_matrix_block) {
 				printf("\n");
 			}*/
 		}
-
+		current_input_vector = current_matrix_block.data;
 		for (int i = 0; i < fully_connected_layers_count; i++)
 		{
 			//test
@@ -64,7 +65,25 @@ void Network::run(MatrixBlock& image_matrix_block) {
 
 			int next_layer_neurons_count = fully_connected_layers_neurons_count[i];
 			FullyConnectedLayer fullyconnected_layer = FullyConnectedLayer(current_matrix_block.depth * current_matrix_block.matrixes_size, next_layer_neurons_count);
-			fullyconnected_layer.forward(current_matrix_block.data);
+			current_input_vector = fullyconnected_layer.forward(current_input_vector);
+			fullyConnectedLayers.push_back(fullyconnected_layer);
+		}
+	}
+	else
+	{
+		for (int i = 0; i < convolutional_layers_count; i++)
+		{
+			ConvolutionalLayer conv_layer = convolutionalLayers[i];
+			current_matrix_block = conv_layer.forward(current_matrix_block);
+
+			PooingLayer pooling_layer = PooingLayer(pooling_filters_size);
+			current_matrix_block = pooling_layer.forward(current_matrix_block);
+		}
+		current_input_vector = current_matrix_block.data;
+		for (int i = 0; i < fully_connected_layers_count; i++)
+		{
+			FullyConnectedLayer fullyconnected_layer = fullyConnectedLayers[i];
+			current_input_vector = fullyconnected_layer.forward(current_input_vector);
 		}
 	}
 }
