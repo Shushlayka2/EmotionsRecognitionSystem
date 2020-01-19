@@ -38,6 +38,7 @@ void set_normal_random(float* arr, const int arr_size, const float mu, const flo
 	cudaMalloc((void**)&arr_device, sizeof(float) * half_arr_size * 2);
 
 	generate_normal_random_vector << <GRID_SIZE, BLOCK_SIZE >> > (arr_device, half_arr_size * 2, mu, sigma, seed);
+	cudaDeviceSynchronize();
 	cudacall(cudaGetLastError());
 
 	cudaMemcpy(arr, arr_device, sizeof(float) * arr_size, cudaMemcpyDeviceToHost);

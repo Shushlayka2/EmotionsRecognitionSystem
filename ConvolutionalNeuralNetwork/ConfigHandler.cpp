@@ -48,3 +48,34 @@ Chameleon const& ConfigHandler::Value(std::string const& entry) const {
 
     return ci->second;
 }
+
+std::vector<int> ConfigHandler::VectorValue(std::string const& entry) const {
+    std::map<std::string, Chameleon>::const_iterator ci = content.find(entry);
+
+    if (ci == content.end()) throw_line("does not exist");
+    
+    std::string line = ci->second;
+    return split(line);
+}
+
+std::vector<int> ConfigHandler::split(const std::string& s) const {
+    std::vector<int> ret_vec;
+    typedef std::string::size_type string_size;
+    string_size i = 0;
+
+    while (i != s.size()) {
+
+        while (i != s.size() && isspace(s[i]))
+            ++i;
+
+        string_size j = i;
+        while (j != s.size() && !isspace(s[j]))
+            j++;
+
+        if (i != j) {
+            ret_vec.push_back(std::stoi(s.substr(i, j - i)));
+            i = j;
+        }
+    }
+    return ret_vec;
+}

@@ -43,16 +43,11 @@ __global__ void cuda_pooling(float* result, const int cols, const int rows, cons
 	}
 }
 
-PooingLayer::PooingLayer(MatrixBlock& input_matrixes, const int filter_size) {
-	this->input_matrixes = input_matrixes;
+PooingLayer::PooingLayer(const int filter_size) {
 	this->filter_size = filter_size;
 }
 
-MatrixBlock PooingLayer::get_pooled_feature_map() {
-	return pooled_feature_map;
-}
-
-void  PooingLayer::forward() {
+MatrixBlock& PooingLayer::forward(MatrixBlock& input_matrixes) {
 	float* matrixes_device;
 	float* pooled_feature_map_matrix;
 	float* pooled_feature_map_device;
@@ -77,9 +72,9 @@ void  PooingLayer::forward() {
 
 	cudaMemcpy(pooled_feature_map_matrix, pooled_feature_map_device, sizeof(float) * pooled_feature_map_depth * pooled_feature_map_size, cudaMemcpyDeviceToHost);
 
-	pooled_feature_map = MatrixBlock(pooled_feature_map_matrix, pooled_feature_map_rows, pooled_feature_map_cols, pooled_feature_map_depth);
-
 	cudaUnbindTexture(InputMatrixesRef);
 	cudaFree(matrixes_device);
 	cudaFree(pooled_feature_map_device);
+
+	return MatrixBlock(pooled_feature_map_matrix, pooled_feature_map_rows, pooled_feature_map_cols, pooled_feature_map_depth);
 }

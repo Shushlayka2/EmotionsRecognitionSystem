@@ -4,13 +4,9 @@
 
 class ConvolutionalLayer {
 private:
-	MatrixBlock input_matrixes; 
 	MatrixBlock filters;
-	MatrixBlock feature_map;
 public:
-	ConvolutionalLayer(MatrixBlock& input_matrixes, const int filter_size, const int filters_count);
+	ConvolutionalLayer(const int filter_size, const int filters_count);
 
-	MatrixBlock get_feature_map();
-
-	void forward();
+	MatrixBlock& forward(MatrixBlock& input_matrixes);
 };

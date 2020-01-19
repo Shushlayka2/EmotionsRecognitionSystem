@@ -56,8 +56,7 @@ __global__ void cuda_ReLU(float* arr, const int cols, const int rows, const int 
 	}
 }
 
-ConvolutionalLayer::ConvolutionalLayer(MatrixBlock& input_matrixes, const int filter_size, const int filters_count) {
-	this->input_matrixes = input_matrixes;
+ConvolutionalLayer::ConvolutionalLayer(const int filter_size, const int filters_count) {
 	unsigned int filter_elements_count = filter_size * filter_size * filters_count;
 	float* random_elements = (float*)malloc(sizeof(float) * filter_elements_count);
 	set_normal_random(random_elements, filter_elements_count);
@@ -69,11 +68,7 @@ ConvolutionalLayer::ConvolutionalLayer(MatrixBlock& input_matrixes, const int fi
 	filters = MatrixBlock(random_elements, filter_size, filter_size, filters_count);
 }
 
-MatrixBlock ConvolutionalLayer::get_feature_map() {
-	return feature_map;
-}
-
-void ConvolutionalLayer::forward() {
+MatrixBlock& ConvolutionalLayer::forward(MatrixBlock& input_matrixes) {
 	float* matrixes_device;
 	float* filters_device;
 	float* feature_map_device;
@@ -115,11 +110,11 @@ void ConvolutionalLayer::forward() {
 
 	cudaMemcpy(feature_map_matrix, feature_map_device, sizeof(float) * feature_map_size * feature_map_depth, cudaMemcpyDeviceToHost);
 
-	feature_map = MatrixBlock(feature_map_matrix, feature_map_rows, feature_map_cols, feature_map_depth);
-
 	cudaUnbindTexture(InputMatrixesRef);
 	cudaUnbindTexture(FiltersRef);
 	cudaFree(matrixes_device);
 	cudaFree(filters_device);
 	cudaFree(feature_map_device);
+
+	return MatrixBlock(feature_map_matrix, feature_map_rows, feature_map_cols, feature_map_depth);
 }

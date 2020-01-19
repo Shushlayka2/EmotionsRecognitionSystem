@@ -10,6 +10,8 @@ class Network {
 private:
 	ConfigHandler configurationHandler;
 	int convolutional_layers_count;
+	int fully_connected_layers_count;
+	std::vector<int> fully_connected_layers_neurons_count;
 
 public:
 	std::vector<ConvolutionalLayer> convolutionalLayers;
