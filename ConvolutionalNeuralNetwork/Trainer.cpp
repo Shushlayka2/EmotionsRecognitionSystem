@@ -1,20 +1,20 @@
 #include "Trainer.h"
 #include "Network.h"
 #include "ConfigHandler.h"
-#include "ImageHandler.h"
+#include "DigitImageLoadingService.h"
 
 void Trainer::train() {
+	
+	//preproccess
+	int number_of_images;
 	ConfigHandler configHandler("config.txt");
-	ImageHandler imageHandler;
 	Network network(configHandler);
-	int train_chunk = configHandler.Value("train_chunk");
-	for (int i = 0; i < 10; i++)
+	training_dataset = DigitImageLoadingService::read_mnist_images("train-images.idx3-ubyte", number_of_images);
+
+	//training
+	for (int i = 0; i < number_of_images; i++)
 	{
-		for (int j = 0; j < train_chunk; j++)
-		{
-			MatrixBlock input_image_matrix;
-			imageHandler.convert(input_image_matrix, i, j);
-			network.run(input_image_matrix);
-		}
+		network.set_inputs(training_dataset[i]);
+		network.run();
 	}
 }

@@ -1,1 +1,9 @@
-
+File: C:/Users/Bulat/source/repos/EmotionsRecognitionSystem/ConvolutionalNeuralNetwork/ConvolutionalLayer.cu
+	Line: 92
+		Message: invalid configuration argument
+File: C:/Users/Bulat/source/repos/EmotionsRecognitionSystem/ConvolutionalNeuralNetwork/ConvolutionalLayer.cu
+	Line: 92
+		Message: invalid configuration argument
+File: C:/Users/Bulat/source/repos/EmotionsRecognitionSystem/ConvolutionalNeuralNetwork/ConvolutionalLayer.cu
+	Line: 92
+		Message: invalid configuration argument

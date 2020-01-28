@@ -5,20 +5,31 @@
 #include "MatrixBlock.h"
 #include "ConfigHandler.h"
 #include "ConvolutionalLayer.h"
+#include "PoolingLayer.h"
 #include "FullyConnectedLayer.h"
 
 class Network {
 private:
-	ConfigHandler configurationHandler;
+	int filter_size;
+	int image_size;
+	int amount_of_filters;
+	int pooling_filters_size;
 	int convolutional_layers_count;
 	int fully_connected_layers_count;
-	std::vector<int> fully_connected_layers_neurons_count;
 
-public:
+	ConfigHandler configurationHandler;
+
+	MatrixBlock inputs_device;
+	std::vector<int> fully_connected_layers_neurons_count;
 	std::vector<ConvolutionalLayer> convolutionalLayers;
+	std::vector<PoolingLayer> poolingLayers;
 	std::vector<FullyConnectedLayer> fullyConnectedLayers;
 
-	Network(ConfigHandler& configurationHandler);
+	void init_layers();
 
-	void run(MatrixBlock& image_matrix_block);
+public:
+	Network(ConfigHandler& configurationHandler);
+	void run();
+	void set_inputs(MatrixBlock& image_matrix_block);
+	void free_inputs();
 };

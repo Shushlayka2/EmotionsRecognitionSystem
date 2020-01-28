@@ -1,7 +1,7 @@
-train_chunk = 1
-convolution_layers_count = 3
-amount_of_filters = 2
+image_size = 28
+convolution_layers_count = 2
+amount_of_filters = 3
 filter_size = 3
 pooling_filters_size = 2
-fully_connected_layers_count = 3;
+fully_connected_layers_count = 1;
 fully_connected_layers_neurons_count = 40 20 10

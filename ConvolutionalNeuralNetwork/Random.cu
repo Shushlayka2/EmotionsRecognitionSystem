@@ -7,41 +7,40 @@
 #include "device_launch_parameters.h"
 #include "CustomException.h"
 
-#define DoublePi 6.28318f
 #define BLOCK_SIZE 256
 
 unsigned int seed = time(NULL);
 
-__global__ void generate_normal_random_vector(float* arr, const int arr_size, const float mu, const float sigma, const unsigned int seed)
+__global__ void generate_normal_random_vector(float* arr, const int arr_size, const unsigned int seed)
 {
 	curandState_t state;
 	int id = blockIdx.x * blockDim.x + threadIdx.x;
 	curand_init(seed, id, 0, &state);
-
-	//Преобразование Бокса — Мюллера для моделирования нормального распределения
-	if (2 * id < arr_size)
-	{
-		const float t1 = sigma * __fsqrt_rn(-2 * __logf(curand_uniform(&state)));
-		const float t2 = DoublePi * curand_uniform(&state);
-
-		arr[2 * id] = t1 * __cosf(t2) + mu;
-		arr[2 * id + 1] = t1 * __sinf(t2) + mu;
-	}
+	if (id < arr_size)
+		arr[id] = curand_normal(&state);
 }
 
-void set_normal_random(float* arr, const int arr_size, const float mu, const float sigma)
+float* set_normal_random(const int arr_size, const int depth, size_t& pitch)
 {
-	int half_arr_size = arr_size % 2 == 0 ? arr_size / 2 : (arr_size + 1) / 2;
+	int common_size = arr_size * depth;
 	float* arr_device;
-	const int GRID_SIZE = half_arr_size / BLOCK_SIZE + (half_arr_size % BLOCK_SIZE != 0 ? 1 : 0);
+	const int GRID_SIZE = common_size / BLOCK_SIZE + (common_size % BLOCK_SIZE != 0 ? 1 : 0);
 
-	cudaMalloc((void**)&arr_device, sizeof(float) * half_arr_size * 2);
+	cudaMalloc((void**)&arr_device, common_size * sizeof(float));
 
-	generate_normal_random_vector << <GRID_SIZE, BLOCK_SIZE >> > (arr_device, half_arr_size * 2, mu, sigma, seed);
+	generate_normal_random_vector << <GRID_SIZE, BLOCK_SIZE >> > (arr_device, common_size, seed);
 	cudaDeviceSynchronize();
 	cudacall(cudaGetLastError());
 
-	cudaMemcpy(arr, arr_device, sizeof(float) * arr_size, cudaMemcpyDeviceToHost);
+	if (depth == 1)
+		return arr_device;
+	else
+	{
+		float* arr_2d_device;
+		cudaMallocPitch((void**)&arr_2d_device, &pitch, arr_size * sizeof(float), depth);
+		cudaMemcpy2D(arr_2d_device, pitch, arr_device, arr_size * sizeof(float), arr_size * sizeof(float), depth, cudaMemcpyDeviceToDevice);
+		cudaFree(arr_device);
 
-	cudaFree(arr_device);
+		return arr_2d_device;
+	}
 }

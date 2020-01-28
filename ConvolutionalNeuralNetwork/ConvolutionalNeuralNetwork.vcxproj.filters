@@ -77,6 +77,9 @@
     <ClInclude Include="FullyConnectedLayer.h">
       <Filter>Header Files\Models\Layers</Filter>
     </ClInclude>
+    <ClInclude Include="DigitImageLoadingService.h">
+      <Filter>Header Files\Utilities</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="ConfigHandler.cpp">
@@ -97,7 +100,10 @@
     <ClCompile Include="MatrixBlock.cpp">
       <Filter>Source Files\Models</Filter>
     </ClCompile>
-    <ClCompile Include="Network.cpp">
+    <ClCompile Include="DigitImageLoadingService.cpp">
+      <Filter>Source Files\Utilities</Filter>
+    </ClCompile>
+    <ClCompile Include="Network.cu">
       <Filter>Source Files\Models</Filter>
     </ClCompile>
   </ItemGroup>

@@ -82,6 +82,7 @@
   <ItemGroup>
     <CudaCompile Include="kernel.cu" />
     <CudaCompile Include="Random.cu" />
+    <CudaCompile Include="Network.cu" />
     <CudaCompile Include="PoolingLayer.cu" />
     <CudaCompile Include="ConvolutionalLayer.cu" />
     <CudaCompile Include="FullyConnectedLayer.cu" />
@@ -91,6 +92,7 @@
     <ClInclude Include="ConfigHandler.h" />
     <ClInclude Include="ConvolutionalLayer.h" />
     <ClInclude Include="CustomException.h" />
+    <ClInclude Include="DigitImageLoadingService.h" />
     <ClInclude Include="FullyConnectedLayer.h" />
     <ClInclude Include="ImageHandler.h" />
     <ClInclude Include="Network.h" />
@@ -103,9 +105,9 @@
     <ClCompile Include="Chameleon.cpp" />
     <ClCompile Include="ConfigHandler.cpp" />
     <ClCompile Include="CustomException.cpp" />
+    <ClCompile Include="DigitImageLoadingService.cpp" />
     <ClCompile Include="ImageHandler.cpp" />
     <ClCompile Include="MatrixBlock.cpp" />
-    <ClCompile Include="Network.cpp" />
     <ClCompile Include="Trainer.cpp" />
   </ItemGroup>
   <ItemGroup>

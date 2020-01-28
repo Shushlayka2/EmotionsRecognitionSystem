@@ -16,5 +16,5 @@ private:
 public:
 	CustomException(const std::string&, const std::string&, const int);
 
-	void CloseLogFile();
+	static void CloseLogFile();
 };
