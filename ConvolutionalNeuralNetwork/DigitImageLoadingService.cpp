@@ -45,7 +45,7 @@ MatrixBlock* DigitImageLoadingService::read_mnist_images(std::string full_path, 
     }
 }
 
-float* DigitImageLoadingService::read_mnist_labels(std::string full_path, int& number_of_labels) {
+int* DigitImageLoadingService::read_mnist_labels(std::string full_path, int& number_of_labels) {
     std::ifstream file(full_path, std::ios::binary);
 
     if (file.is_open()) {
@@ -58,10 +58,10 @@ float* DigitImageLoadingService::read_mnist_labels(std::string full_path, int& n
 
         file.read((char*)&number_of_labels, sizeof(number_of_labels)), number_of_labels = reverseInt(number_of_labels);
 
-        float* _dataset = new float[number_of_labels];
+        int* _dataset = new int[number_of_labels];
         for (int i = 0; i < number_of_labels; i++) {
             file.read((char*)&temp, 1);
-            _dataset[i] = (float)temp;
+            _dataset[i] = (int)temp;
         }
         return _dataset;
     }

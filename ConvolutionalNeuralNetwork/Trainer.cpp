@@ -10,11 +10,14 @@ void Trainer::train() {
 	ConfigHandler configHandler("config.txt");
 	Network network(configHandler);
 	training_dataset = DigitImageLoadingService::read_mnist_images("train-images.idx3-ubyte", number_of_images);
+	training_labels = DigitImageLoadingService::read_mnist_labels("train-labels.idx1-ubyte", number_of_images);
 
 	//training
 	for (int i = 0; i < number_of_images; i++)
 	{
 		network.set_inputs(training_dataset[i]);
 		network.run();
+
+		network.correct(training_labels[i]);
 	}
 }

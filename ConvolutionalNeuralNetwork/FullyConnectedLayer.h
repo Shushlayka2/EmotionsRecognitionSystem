@@ -13,13 +13,17 @@ private:
 	float* biases_device;
 
 	size_t weights_pitch;
+	cublasHandle_t handle;
 
 	void add_biases(cublasHandle_t& handle);
 	void activate_softmax(cublasHandle_t& handle);
-	void m_v_multiplication(float* matrix, float* vector, float* result_vector, cublasHandle_t& handle);
+	void m_v_multiplication(float* matrix, float* vector, float* result_vector, cublasHandle_t& handle, cublasOperation_t trans = CUBLAS_OP_N);
 
 public:
 	FullyConnectedLayer(int in_size, int out_size);
+	float* set_gradients(int correct_result);
+	float* get_gradients();
 	float* forward(float* prev_layer_data);
+	float* backward(float* prev_layer_gradients);
 	void freeMemory();
 };

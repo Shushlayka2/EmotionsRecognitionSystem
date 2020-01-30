@@ -23,6 +23,7 @@ namespace ConvolutionalNeuralNetworkTester
 		std::fstream file;
 		MatrixBlock inputs_device;
 		MatrixBlock custom_device;
+		MatrixBlock gradients_device;
 
 		void host_to_device(MatrixBlock& mb) {
 			float* data_host = mb.data;
@@ -47,6 +48,12 @@ namespace ConvolutionalNeuralNetworkTester
 			host_to_device(result);
 			return result;
 		}
+		
+		MatrixBlock& init_gradients() {
+			MatrixBlock result = MatrixBlock(5, 5, 1);
+			cudaMallocPitch((void**)&gradients_device.data, &gradients_device.pitch, gradients_device.matrixes_size, gradients_device.depth);
+			return result;
+		}
 
 	public:	
 		ConvolutionalNeuralNetworkTester()
@@ -57,6 +64,7 @@ namespace ConvolutionalNeuralNetworkTester
 			host_to_device(training_dataset[0]);
 			inputs_device = training_dataset[0];
 			custom_device = init_custom_inputs();
+			gradients_device = init_custom_inputs();
 			for (int i = 1; i < number_of_images; i++)
 				free(training_dataset[i].data);
 		}
@@ -66,6 +74,7 @@ namespace ConvolutionalNeuralNetworkTester
 			file.close();
 			cudaFree(inputs_device.data);
 			cudaFree(custom_device.data);
+			cudaFree(gradients_device.data);
 		}
 
 		TEST_METHOD(InputsTesting)
@@ -141,8 +150,10 @@ namespace ConvolutionalNeuralNetworkTester
 
 		TEST_METHOD(ConvolveTesting)
 		{
-			int filter_size = 3, amount_of_filters = 3;
-			ConvolutionalLayer conv_layer = ConvolutionalLayer(filter_size, amount_of_filters);			
+			int filter_size = 3, amount_of_filters = 3,
+				gradient_size = custom_device.cols_count - filter_size + 1;
+
+			ConvolutionalLayer conv_layer = ConvolutionalLayer(filter_size, amount_of_filters, gradient_size, filter_size);
 
 			custom_device = conv_layer.forward(custom_device);
 			float* output_host;
@@ -165,15 +176,19 @@ namespace ConvolutionalNeuralNetworkTester
 				file << std::endl;
 			}
 			file << std::endl;
+
+			cudaFree(gradients_device.data);
+			gradients_device = conv_layer.gradients_device;
+
 			free(output_host);
 		}
 
 		TEST_METHOD(PoolingTesting)
 		{
-			int filter_size = 2;
-			PoolingLayer pooling_layer = PoolingLayer(filter_size);
+			int filter_size = 2, gradient_size = custom_device.cols_count / 2 + (custom_device.cols_count % 2 == 0 ? 0 : 1);
+			PoolingLayer pooling_layer = PoolingLayer(filter_size, gradient_size, custom_device.depth);
 
-			custom_device = pooling_layer.forward(custom_device);
+			custom_device = pooling_layer.forward(custom_device, gradients_device);
 			float* output_host = (float*)malloc(custom_device.matrixes_size * custom_device.depth * sizeof(float));
 			cudaMemcpy2D(output_host, custom_device.matrixes_size * sizeof(float), custom_device.data, custom_device.pitch, custom_device.matrixes_size * sizeof(float), custom_device.depth, cudaMemcpyDeviceToHost);
 
@@ -192,6 +207,27 @@ namespace ConvolutionalNeuralNetworkTester
 				file << std::endl;
 			}
 			file << std::endl;
+
+			free(output_host);
+			output_host = (float*)malloc(gradients_device.depth * gradients_device.matrixes_size * sizeof(float));
+			cudaMemcpy2D(output_host, gradients_device.matrixes_size * sizeof(float), gradients_device.data, gradients_device.pitch, gradients_device.matrixes_size * sizeof(float), gradients_device.depth, cudaMemcpyDeviceToHost);
+			
+			for (int i = 0; i < gradients_device.depth; i++)
+			{
+				for (int j = 0; j < gradients_device.rows_count; j++)
+				{
+					for (int l = 0; l < gradients_device.cols_count; l++)
+					{
+						char buffer[100];
+						sprintf(buffer, "%f ", output_host[i * gradients_device.matrixes_size + j * gradients_device.cols_count + l]);
+						file << buffer;
+					}
+					file << std::endl;
+				}
+				file << std::endl;
+			}
+			file << std::endl;
+
 			free(output_host);
 		}
 

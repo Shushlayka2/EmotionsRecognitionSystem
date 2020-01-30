@@ -39,6 +39,14 @@ __global__ void cuda_softmax(float* A, float* max, const float log_val, const in
 	}
 }
 
+__global__ void cuda_set_gradients(float* A, const int num)
+{
+	int idx = blockIdx.x * blockDim.x + threadIdx.x;
+	A[idx] = 0.0f;
+	if (idx == num)
+		A[idx] = 1 - A[idx];
+}
+
 float find_max(float* arr, int size);
 
 FullyConnectedLayer::FullyConnectedLayer(int in_size, int out_size) {
@@ -46,27 +54,30 @@ FullyConnectedLayer::FullyConnectedLayer(int in_size, int out_size) {
 	this->out_size = out_size;
 	weights_device = set_normal_random(in_size * out_size, 1, weights_pitch);
 	biases_device = set_normal_random(out_size, 1, weights_pitch);
+	cudaMalloc((void**)&gradients_device, out_size * sizeof(float));
 	cudaMalloc((void**)&outputs_device, out_size * sizeof(float));
+	cublasCreate(&handle);
 }
 
 float* FullyConnectedLayer::forward(float* prev_layer_data) {
 
 	inputs_device = prev_layer_data;
-	cublasHandle_t handle;
-	cublasCreate(&handle);
 	
 	m_v_multiplication(weights_device, inputs_device, outputs_device, handle);
 	add_biases(handle);
 	activate_softmax(handle);
 
-	cublasDestroy(handle);
-
 	return outputs_device;
 }
 
-void FullyConnectedLayer::m_v_multiplication(float* matrix, float* vector, float* result_vector, cublasHandle_t& handle) {
+float* FullyConnectedLayer::backward(float* prev_layer_gradients) {
+	m_v_multiplication(weights_device, prev_layer_gradients, gradients_device, handle, CUBLAS_OP_T);
+	return gradients_device;
+}
+
+void FullyConnectedLayer::m_v_multiplication(float* matrix, float* vector, float* result_vector, cublasHandle_t& handle, cublasOperation_t trans) {
 	float alpha = 1.0f, beta = 0.0f;
-	cublascall(cublasSgemv(handle, CUBLAS_OP_N, out_size, in_size, &alpha, matrix, out_size, vector, 1, &beta, result_vector, 1));
+	cublascall(cublasSgemv(handle, trans, out_size, in_size, &alpha, matrix, out_size, vector, 1, &beta, result_vector, 1));
 }
 
 void FullyConnectedLayer::add_biases(cublasHandle_t& handle) {
@@ -100,10 +111,20 @@ void FullyConnectedLayer::activate_softmax(cublasHandle_t& handle) {
 	cudaFree(max_device);
 }
 
+float* FullyConnectedLayer::set_gradients(int correct_result) {
+	cuda_set_gradients << <1, 10 >> > (gradients_device, correct_result);
+	return gradients_device;
+}
+
+float* FullyConnectedLayer::get_gradients() {
+	return gradients_device;
+}
+
 void FullyConnectedLayer::freeMemory() {
 	cudaFree(inputs_device);
 	cudaFree(outputs_device);
 	cudaFree(gradients_device);
 	cudaFree(weights_device);
 	cudaFree(biases_device);
+	cublasDestroy(handle);
 }

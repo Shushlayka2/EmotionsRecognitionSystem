@@ -26,8 +26,8 @@ void Network::run() {
 		ConvolutionalLayer conv_layer = convolutionalLayers[i];
 		current_matrix_block = conv_layer.forward(current_matrix_block);
 
-		PoolingLayer pooling_layer = PoolingLayer(pooling_filters_size);
-		current_matrix_block = pooling_layer.forward(current_matrix_block);
+		PoolingLayer pooling_layer = poolingLayers[i];
+		current_matrix_block = pooling_layer.forward(current_matrix_block, conv_layer.gradients_device);
 	}
 
 	float* current_input_vector;
@@ -41,20 +41,45 @@ void Network::run() {
 	}
 }
 
+void Network::correct(int correct_result) {
+
+	float* current_gradients = fullyConnectedLayers[fully_connected_layers_count - 1].set_gradients(correct_result);
+	for (int i = fully_connected_layers_count - 1; i > 0; i--)
+	{
+		current_gradients = fullyConnectedLayers[i].backward(fullyConnectedLayers[i - 1].get_gradients());
+	}
+
+	MatrixBlock cur_gradients_mb = poolingLayers[convolutional_layers_count - 1].gradients_device;
+	cudaMemcpy2D(cur_gradients_mb.data, cur_gradients_mb.pitch, current_gradients, cur_gradients_mb.matrixes_size * sizeof(float),
+		cur_gradients_mb.matrixes_size * sizeof(float), cur_gradients_mb.depth, cudaMemcpyDeviceToDevice);
+
+
+	for (int i = convolutional_layers_count - 1; i > 0; i--)
+	{
+		poolingLayers[i].backward(convolutionalLayers[i].gradients_device);
+		convolutionalLayers[i].backward(poolingLayers[i - 1].gradients_device);
+	}
+	poolingLayers[0].backward(convolutionalLayers[0].gradients_device);
+}
+
 void Network::init_layers() {
 
 	int depth = 1;
 	int prev_layer_neurons_count = image_size;
 	for (int i = 0; i < convolutional_layers_count; i++)
 	{
-		ConvolutionalLayer conv_layer = ConvolutionalLayer(filter_size, amount_of_filters);
-		PoolingLayer pooling_layer = PoolingLayer(pooling_filters_size);
+		depth *= amount_of_filters;
+
+		prev_layer_neurons_count = prev_layer_neurons_count - filter_size + 1;
+		ConvolutionalLayer conv_layer = ConvolutionalLayer(filter_size, amount_of_filters, prev_layer_neurons_count, depth);
+
+		prev_layer_neurons_count = prev_layer_neurons_count / 2 + (prev_layer_neurons_count % 2 == 0 ? 0 : 1);
+		PoolingLayer pooling_layer = PoolingLayer(pooling_filters_size, prev_layer_neurons_count, depth);
+		
 		convolutionalLayers.push_back(conv_layer);
 		poolingLayers.push_back(pooling_layer);
-		prev_layer_neurons_count = prev_layer_neurons_count - filter_size + 1;
-		prev_layer_neurons_count = prev_layer_neurons_count / 2 + (prev_layer_neurons_count % 2 == 0 ? 0 : 1);
-		depth *= amount_of_filters;
 	}
+
 	prev_layer_neurons_count *= prev_layer_neurons_count * depth;
 
 	for (int i = 0; i < fully_connected_layers_count; i++)

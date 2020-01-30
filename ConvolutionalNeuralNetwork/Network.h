@@ -30,6 +30,7 @@ private:
 public:
 	Network(ConfigHandler& configurationHandler);
 	void run();
+	void correct(int correct_result);
 	void set_inputs(MatrixBlock& image_matrix_block);
 	void free_inputs();
 };
