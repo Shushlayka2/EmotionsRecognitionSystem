@@ -97,7 +97,7 @@ __global__ void cuda_add_padding(float* inn_gr, float* out_gr, size_t inn_gr_pit
 	int x = blockDim.x * blockIdx.x + threadIdx.x;
 	int y = blockDim.y * blockIdx.y + threadIdx.y;
 	int z = blockDim.z * blockIdx.z + threadIdx.z;
-	if (x >= border_size && x <= out_gr_cols - border_size && y >= border_size && y <= out_gr_rows - border_size && z < depth)
+	if (x >= border_size && x < out_gr_cols - border_size && y >= border_size && y < out_gr_rows - border_size && z < depth)
 	{
 		float* inn_gr_start = (float*)((char*)inn_gr + z * inn_gr_pitch);
 		float* out_gr_start = (float*)((char*)out_gr + z * out_gr_pitch);
@@ -112,7 +112,7 @@ ConvolutionalLayer::ConvolutionalLayer(const int filters_size, const int filters
 	filters_device = MatrixBlock(random_elements, filters_size, filters_size, filters_count, pitch);
 
 	gradients_device = MatrixBlock(gradients_size, gradients_size, gradients_depth);
-	cudaMallocPitch((void**)&gradients_device.data, &gradients_device.pitch, gradients_device.matrixes_size, gradients_device.depth);
+	cudaMallocPitch((void**)&gradients_device.data, &gradients_device.pitch, gradients_device.matrixes_size * sizeof(float), gradients_device.depth);
 }
 
 MatrixBlock& ConvolutionalLayer::forward(MatrixBlock& input_matrixes) {
@@ -146,8 +146,8 @@ void ConvolutionalLayer::backward(MatrixBlock& prev_gradient_matrixes) {
 	int padded_gradients_matrixes_cols = gradients_device.cols_count + border_size * 2;
 	int padded_gradients_matrixes_rows = gradients_device.rows_count + border_size * 2;
 	int padded_gradients_matrixes_size = padded_gradients_matrixes_cols * padded_gradients_matrixes_rows;
-	cudaMallocPitch((void**)padded_gradients_device, &padded_gradients_pitch, padded_gradients_matrixes_size, gradients_device.depth);
-	cudaMallocPitch((void**)reverted_filters_device, &reverted_filters_pitch, filters_device.matrixes_size, filters_device.depth);
+	cudaMallocPitch((void**)&padded_gradients_device, &padded_gradients_pitch, padded_gradients_matrixes_size * sizeof(float), gradients_device.depth);
+	cudaMallocPitch((void**)&reverted_filters_device, &reverted_filters_pitch, filters_device.matrixes_size * sizeof(float), filters_device.depth);
 	
 	dim3 threadsPerBlock = dim3(10, 10, 10);
 	dim3 blocksPerGrid = dim3(filters_device.cols_count / 10 + (filters_device.cols_count % 10 == 0 ? 0 : 1),
@@ -161,7 +161,7 @@ void ConvolutionalLayer::backward(MatrixBlock& prev_gradient_matrixes) {
 	blocksPerGrid = dim3(padded_gradients_matrixes_cols / 10 + (padded_gradients_matrixes_cols % 10 == 0 ? 0 : 1),
 		padded_gradients_matrixes_rows / 10 + (padded_gradients_matrixes_rows % 10 == 0 ? 0 : 1),
 		gradients_device.depth / 10 + (gradients_device.depth % 10 == 0 ? 0 : 1));
-	
+
 	cuda_add_padding << <blocksPerGrid, threadsPerBlock >> > (gradients_device.data, padded_gradients_device, gradients_device.pitch, padded_gradients_pitch, padded_gradients_matrixes_cols, padded_gradients_matrixes_rows, gradients_device.depth, border_size, gradients_device.cols_count);
 	cudaDeviceSynchronize();
 	cudacall(cudaGetLastError());
@@ -174,6 +174,8 @@ void ConvolutionalLayer::backward(MatrixBlock& prev_gradient_matrixes) {
 		padded_gradients_matrixes_rows / 10 + (padded_gradients_matrixes_rows % 10 == 0 ? 0 : 1), prev_gradient_matrixes.depth);
 	
 	cuda_back_convolve << <blocksPerGrid, threadsPerBlock >> > (prev_gradient_matrixes.data, padded_gradients_matrixes_cols, padded_gradients_matrixes_rows, padded_gradients_pitch, filters_device.cols_count, filters_device.depth);
+	cudaDeviceSynchronize();
+	cudacall(cudaGetLastError());
 
 	cudaUnbindTexture(FiltersRef);
 	cudaUnbindTexture(MatrixesRef);
@@ -206,6 +208,6 @@ void ConvolutionalLayer::activate() {
 void ConvolutionalLayer::freeMemory() {
 	cudaFree(inputs_device.data);
 	cudaFree(filters_device.data);
-	//cudaFree(deltas_device.data);
+	cudaFree(gradients_device.data);
 	cudaFree(outputs_devices.data);
 }

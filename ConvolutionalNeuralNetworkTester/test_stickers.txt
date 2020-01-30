@@ -1,0 +1,198 @@
+FullConnectedLayer::backward
+
+//test
+	float* gradients_host = new float[out_size];
+	float* prev_gr_host = new float[in_size];
+	float* weights_host = new float[out_size * in_size];
+	cudaMemcpy(gradients_host, gradients_device, out_size * sizeof(float), cudaMemcpyDeviceToHost);
+	cudaMemcpy(weights_host, weights_device, out_size * in_size * sizeof(float), cudaMemcpyDeviceToHost);
+
+	for (int i = 0; i < out_size; i++)
+	{
+		printf("%f ", gradients_host[i]);
+	}
+	printf("\n\n");
+
+	for (int i = 0; i < out_size; i++)
+	{
+		for (int j = 0; j < in_size; j++)
+		{
+			printf("%f ", weights_host[i * in_size + j]);
+		}
+		printf("\n");
+	}
+	printf("\n");
+	
+	m_v_multiplication(weights_device, gradients_device, prev_layer_gradients, handle, CUBLAS_OP_N);
+	
+	cudaMemcpy(prev_gr_host, prev_layer_gradients, in_size * sizeof(float), cudaMemcpyDeviceToHost);
+
+	for (int i = 0; i < in_size; i++)
+	{
+		printf("%f ", prev_gr_host[i]);
+	}
+	free(gradients_host);
+	free(prev_gr_host);
+	free(weights_host);
+	
+PoolingLayer::backward
+
+dim3 threadsPerBlock = dim3(BLOCK_SIZE, BLOCK_SIZE, 1);
+	dim3 blocksPerGrid = dim3(gradients_device.cols_count / BLOCK_SIZE + (gradients_device.cols_count % BLOCK_SIZE == 0 ? 0 : 1), gradients_device.rows_count / BLOCK_SIZE + (gradients_device.rows_count % BLOCK_SIZE == 0 ? 0 : 1), gradients_device.depth);
+	cudaBindTexture2D(0, GradientMatrixesRef, gradients_device.data, GradientMatrixesRef.channelDesc, gradients_device.matrixes_size, gradients_device.depth, gradients_device.pitch);
+
+	//test
+	float* pool_gr_host = new float[gradients_device.matrixes_size * gradients_device.depth];
+	cudaMemcpy2D(pool_gr_host, gradients_device.matrixes_size * sizeof(float), gradients_device.data, gradients_device.pitch,
+		gradients_device.matrixes_size * sizeof(float), gradients_device.depth, cudaMemcpyDeviceToHost);
+	for (int i = 0; i < gradients_device.depth; i++)
+	{
+		for (int j = 0; j < gradients_device.rows_count; j++)
+		{
+			for (int l = 0; l < gradients_device.cols_count; l++)
+			{
+				printf("%f ", pool_gr_host[i * gradients_device.matrixes_size + j * gradients_device.cols_count + l]);
+			}
+			printf("\n");
+		}
+		printf("\n");
+	}
+	printf("\n");
+
+	float* conv_gr_host = new float[prev_gradient_matrixes.matrixes_size * prev_gradient_matrixes.depth];
+	cudaMemcpy2D(conv_gr_host, prev_gradient_matrixes.matrixes_size * sizeof(float), prev_gradient_matrixes.data, prev_gradient_matrixes.pitch,
+		prev_gradient_matrixes.matrixes_size * sizeof(float), prev_gradient_matrixes.depth, cudaMemcpyDeviceToHost);
+	for (int i = 0; i < prev_gradient_matrixes.depth; i++)
+	{
+		for (int j = 0; j < prev_gradient_matrixes.rows_count; j++)
+		{
+			for (int l = 0; l < prev_gradient_matrixes.cols_count; l++)
+			{
+				printf("%f ", conv_gr_host[i * prev_gradient_matrixes.matrixes_size + j * prev_gradient_matrixes.cols_count + l]);
+			}
+			printf("\n");
+		}
+		printf("\n");
+	}
+	printf("\n");
+
+	cuda_generate_gradients << <blocksPerGrid, threadsPerBlock >> > (prev_gradient_matrixes.data, prev_gradient_matrixes.pitch, prev_gradient_matrixes.cols_count, prev_gradient_matrixes.rows_count, gradients_device.cols_count, filter_size);
+	cudaDeviceSynchronize();
+	cudacall(cudaGetLastError());
+
+	//test
+	cudaMemcpy2D(conv_gr_host, prev_gradient_matrixes.matrixes_size * sizeof(float), prev_gradient_matrixes.data, prev_gradient_matrixes.pitch,
+		prev_gradient_matrixes.matrixes_size * sizeof(float), prev_gradient_matrixes.depth, cudaMemcpyDeviceToHost);
+	for (int i = 0; i < prev_gradient_matrixes.depth; i++)
+	{
+		for (int j = 0; j < prev_gradient_matrixes.rows_count; j++)
+		{
+			for (int l = 0; l < prev_gradient_matrixes.cols_count; l++)
+			{
+				printf("%f ", conv_gr_host[i * prev_gradient_matrixes.matrixes_size + j * prev_gradient_matrixes.cols_count + l]);
+			}
+			printf("\n");
+		}
+		printf("\n");
+	}
+	printf("\n");
+
+	cudaUnbindTexture(InputMatrixesRef);
+	
+ConvolutionalLayer::backward
+
+//test
+	float* filters_host = new float[filters_device.matrixes_size * filters_device.depth];
+	cudaMemcpy2D(filters_host, filters_device.matrixes_size * sizeof(float), filters_device.data, filters_device.pitch, filters_device.matrixes_size * sizeof(float), filters_device.depth, cudaMemcpyDeviceToHost);
+	for (int i = 0; i < filters_device.depth; i++)
+	{
+		for (int j = 0; j < filters_device.rows_count; j++)
+		{
+			for (int l = 0; l < filters_device.cols_count; l++)
+			{
+				printf("%f ", filters_host[i * filters_device.matrixes_size + j * filters_device.cols_count + l]);
+			}
+			printf("\n");
+		}
+		printf("\n");
+	}
+	printf("\n");
+
+	cuda_revert_filters << <blocksPerGrid, threadsPerBlock >> > (filters_device.data, reverted_filters_device, filters_device.pitch, reverted_filters_pitch, filters_device.cols_count, filters_device.rows_count, filters_device.depth);
+	cudaDeviceSynchronize();
+	cudacall(cudaGetLastError());
+
+	//test
+	float* reverted_filters_host = new float[filters_device.matrixes_size * filters_device.depth];
+	cudaMemcpy2D(reverted_filters_host, filters_device.matrixes_size * sizeof(float), reverted_filters_device, reverted_filters_pitch, filters_device.matrixes_size * sizeof(float), filters_device.depth, cudaMemcpyDeviceToHost);
+	for (int i = 0; i < filters_device.depth; i++)
+	{
+		for (int j = 0; j < filters_device.rows_count; j++)
+		{
+			for (int l = 0; l < filters_device.cols_count; l++)
+			{
+				printf("%f ", reverted_filters_host[i * filters_device.matrixes_size + j * filters_device.cols_count + l]);
+			}
+			printf("\n");
+		}
+		printf("\n");
+	}
+	printf("\n");
+	free(reverted_filters_host);
+	
+	//test
+	float* conv_gr_host = new float[gradients_device.matrixes_size * gradients_device.depth];
+	cudaMemcpy2D(conv_gr_host, gradients_device.matrixes_size * sizeof(float), gradients_device.data, gradients_device.pitch,
+		gradients_device.matrixes_size * sizeof(float), gradients_device.depth, cudaMemcpyDeviceToHost);
+	for (int i = 0; i < gradients_device.depth; i++)
+	{
+		for (int j = 0; j < gradients_device.rows_count; j++)
+		{
+			for (int l = 0; l < gradients_device.cols_count; l++)
+			{
+				printf("%f ", conv_gr_host[i * gradients_device.matrixes_size + j * gradients_device.cols_count + l]);
+			}
+			printf("\n");
+		}
+		printf("\n");
+	}
+	printf("\n");
+	free(conv_gr_host);
+	
+	//test
+	float* padded_conv_gr_host = new float[padded_gradients_matrixes_size * gradients_device.depth];
+	cudaMemcpy2D(padded_conv_gr_host, padded_gradients_matrixes_size * sizeof(float), padded_gradients_device, padded_gradients_pitch,
+		padded_gradients_matrixes_size * sizeof(float), gradients_device.depth, cudaMemcpyDeviceToHost);
+	for (int i = 0; i < gradients_device.depth; i++)
+	{
+		for (int j = 0; j < padded_gradients_matrixes_rows; j++)
+		{
+			for (int l = 0; l < padded_gradients_matrixes_cols; l++)
+			{
+				printf("%f ", padded_conv_gr_host[i * padded_gradients_matrixes_size + j * padded_gradients_matrixes_cols + l]);
+			}
+			printf("\n");
+		}
+		printf("\n");
+	}
+	printf("\n");
+	free(padded_conv_gr_host);
+	
+	//test
+	float* prev_gr_host = new float[prev_gradient_matrixes.matrixes_size * prev_gradient_matrixes.depth];
+	cudaMemcpy2D(prev_gr_host, prev_gradient_matrixes.matrixes_size * sizeof(float), prev_gradient_matrixes.data, prev_gradient_matrixes.pitch,
+		prev_gradient_matrixes.matrixes_size * sizeof(float), prev_gradient_matrixes.depth, cudaMemcpyDeviceToHost);
+	for (int i = 0; i < prev_gradient_matrixes.depth; i++)
+	{
+		for (int j = 0; j < prev_gradient_matrixes.rows_count; j++)
+		{
+			for (int l = 0; l < prev_gradient_matrixes.cols_count; l++)
+			{
+				printf("%f ", prev_gr_host[i * prev_gradient_matrixes.matrixes_size + j * prev_gradient_matrixes.cols_count + l]);
+			}
+			printf("\n");
+		}
+		printf("\n");
+	}
+	printf("\n");
+	free(prev_gr_host);

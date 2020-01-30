@@ -51,7 +51,7 @@ namespace ConvolutionalNeuralNetworkTester
 		
 		MatrixBlock& init_gradients() {
 			MatrixBlock result = MatrixBlock(5, 5, 1);
-			cudaMallocPitch((void**)&gradients_device.data, &gradients_device.pitch, gradients_device.matrixes_size, gradients_device.depth);
+			cudaMallocPitch((void**)&result.data, &result.pitch, result.matrixes_size * sizeof(float), result.depth);
 			return result;
 		}
 
@@ -64,7 +64,7 @@ namespace ConvolutionalNeuralNetworkTester
 			host_to_device(training_dataset[0]);
 			inputs_device = training_dataset[0];
 			custom_device = init_custom_inputs();
-			gradients_device = init_custom_inputs();
+			gradients_device = init_gradients();
 			for (int i = 1; i < number_of_images; i++)
 				free(training_dataset[i].data);
 		}
@@ -122,13 +122,13 @@ namespace ConvolutionalNeuralNetworkTester
 
 		TEST_METHOD(RandomTesting)
 		{
-			int rows = 3, cols = 3;
+			int rows = 10, cols = 9;
 			float* result_host;
 			float* result_device;
 			size_t pitch;
 
 			result_host = (float*)malloc(rows * cols * sizeof(float));
-			result_device = set_normal_random(rows, cols, pitch);
+			result_device = set_normal_random(cols, rows, pitch);
 			cudaMemcpy2D(result_host, cols * sizeof(float), result_device, pitch, cols * sizeof(float), rows, cudaMemcpyDeviceToHost);
 
 			for (int i = 0; i < rows; i++)
@@ -233,13 +233,13 @@ namespace ConvolutionalNeuralNetworkTester
 
 		TEST_METHOD(FullyConnectedTesting)
 		{
-			FullyConnectedLayer fullyConnected_layer = FullyConnectedLayer(custom_device.matrixes_size * custom_device.depth, 5);
+			FullyConnectedLayer fullyConnected_layer = FullyConnectedLayer(custom_device.matrixes_size * custom_device.depth, 10);
 			float* custom_vector_device = matrix_to_vector(custom_device);
 			custom_vector_device = fullyConnected_layer.forward(custom_vector_device);
 			float* vector_host;
 			vector_host = (float*)malloc(5 * sizeof(float));
-			cudaMemcpy(vector_host, custom_vector_device, 5 * sizeof(float), cudaMemcpyDeviceToHost);
-			for (int i = 0; i < 5; i++)
+			cudaMemcpy(vector_host, custom_vector_device, 10 * sizeof(float), cudaMemcpyDeviceToHost);
+			for (int i = 0; i < 10; i++)
 			{
 				char buffer[100];
 				sprintf(buffer, "%f ", vector_host[i]);
