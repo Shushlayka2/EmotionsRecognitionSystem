@@ -33,8 +33,7 @@ void Network::run() {
 		current_matrix_block.matrixes_size * sizeof(float), current_matrix_block.depth, cudaMemcpyDeviceToDevice);
 	for (int i = 0; i < fully_connected_layers_count; i++)
 	{
-		FullyConnectedLayer fullyconnected_layer = fullyConnectedLayers[i];
-		current_input_vector = fullyconnected_layer.forward(current_input_vector);
+		current_input_vector = fullyConnectedLayers[i].forward(current_input_vector);
 	}
 }
 
@@ -64,6 +63,11 @@ void Network::correct(int correct_result) {
 	for (int i = 0; i < convolutional_layers_count; i++)
 	{
 		convolutionalLayers[i].correct();
+	}
+
+	for (int i = 0; i < fully_connected_layers_count; i++)
+	{
+		fullyConnectedLayers[i].correct();
 	}
 }
 
@@ -102,7 +106,10 @@ void Network::set_inputs(MatrixBlock& image_matrix_block) {
 	float* data_host = image_matrix_block.data;
 	cudaMallocPitch((void**)&inputs_device.data, &inputs_device.pitch, inputs_device.matrixes_size * sizeof(float), inputs_device.depth);
 	cudaMemcpy2D(inputs_device.data, inputs_device.pitch, data_host, inputs_device.matrixes_size * sizeof(float), inputs_device.matrixes_size * sizeof(float), inputs_device.depth, cudaMemcpyHostToDevice);
-	free(data_host);
+}
+
+int Network::get_result() {
+	return fullyConnectedLayers[fully_connected_layers_count - 1].get_result();
 }
 
 void Network::free_inputs() {

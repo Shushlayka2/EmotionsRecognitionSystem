@@ -13,11 +13,22 @@ void Trainer::train() {
 	training_labels = DigitImageLoadingService::read_mnist_labels("train-labels.idx1-ubyte", number_of_images);
 
 	//training
-	for (int i = 0; i < number_of_images; i++)
+	for (int i = 0; i < number_of_images / 1000; i++)
 	{
 		network.set_inputs(training_dataset[i]);
 		network.run();
 
-		network.correct(training_labels[i]);
+		for (int i = 0; i < 2; i++)
+			network.correct(training_labels[i]);
+	}
+
+	//test
+	for (int i = 0; i < 10; i++)
+	{
+		network.set_inputs(training_dataset[i]);
+		network.run();
+		int result = network.get_result();
+		int correct_result = training_labels[i];
+		printf("Is correct: %d\n", correct_result == result);
 	}
 }

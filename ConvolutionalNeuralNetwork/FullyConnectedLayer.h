@@ -25,5 +25,7 @@ public:
 	float* get_gradients();
 	float* forward(float* prev_layer_data);
 	void backward(float* prev_layer_gradients);
+	void correct();
+	int get_result();
 	void freeMemory();
 };

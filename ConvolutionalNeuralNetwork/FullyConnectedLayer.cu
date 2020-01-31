@@ -8,6 +8,8 @@
 #include "device_launch_parameters.h"
 
 #define BLOCK_SIZE 256
+#define DOUBLE_BLOCK_SIZE 32
+#define LearningRate 0.0005f
 
 __global__ void cuda_find_max(float* A, float* max, const int size)
 {
@@ -46,7 +48,16 @@ __global__ void cuda_set_gradients(float* gradients, float* outputs, const int n
 		gradients[idx] = 1 - outputs[idx];
 }
 
-float find_max(float* arr, int size);
+__global__ void cuda_correct_weights(float* inputs, float* outputs, float* gradients, float* weights, const int inp_count, const int out_count)
+{
+	int idx = blockIdx.x * blockDim.x + threadIdx.x;
+	int idy = blockIdx.y * blockDim.y + threadIdx.y;
+
+	if (idx < inp_count && idy < out_count)
+	{
+		weights[idy * inp_count + idx] -= LearningRate * (outputs[idy] * ((idx == idy) - inputs[idx])) * inputs[idx] * gradients[idy];
+	}
+}
 
 FullyConnectedLayer::FullyConnectedLayer(int in_size, int out_size) {
 	this->in_size = in_size;
@@ -72,6 +83,17 @@ float* FullyConnectedLayer::forward(float* prev_layer_data) {
 void FullyConnectedLayer::backward(float* prev_layer_gradients) {
 
 	m_v_multiplication(weights_device, gradients_device, prev_layer_gradients, handle, CUBLAS_OP_N);
+}
+
+void FullyConnectedLayer::correct() {
+	
+	dim3 threadsPerBlock = dim3(DOUBLE_BLOCK_SIZE, DOUBLE_BLOCK_SIZE);
+	dim3 blocksPerGrid = dim3(in_size / DOUBLE_BLOCK_SIZE + (in_size % DOUBLE_BLOCK_SIZE == 0 ? 0 : 1),
+		out_size / DOUBLE_BLOCK_SIZE + (out_size % DOUBLE_BLOCK_SIZE == 0 ? 0 : 1));
+	
+	cuda_correct_weights << <blocksPerGrid, threadsPerBlock >> > (inputs_device, outputs_device, gradients_device, weights_device, in_size, out_size);
+	cudaDeviceSynchronize();
+	cudacall(cudaGetLastError());
 }
 
 void FullyConnectedLayer::m_v_multiplication(float* matrix, float* vector, float* result_vector, cublasHandle_t& handle, cublasOperation_t trans) {
@@ -117,6 +139,13 @@ void FullyConnectedLayer::set_gradients(int correct_result) {
 
 float* FullyConnectedLayer::get_gradients() {
 	return gradients_device;
+}
+
+int FullyConnectedLayer::get_result() {
+	
+	int max_index;
+	cublascall(cublasIsamax(handle, out_size, outputs_device, 1, &max_index));
+	return max_index;
 }
 
 void FullyConnectedLayer::freeMemory() {

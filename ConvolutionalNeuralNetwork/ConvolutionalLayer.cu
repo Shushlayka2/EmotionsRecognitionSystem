@@ -6,7 +6,7 @@
 #include "cuda_runtime.h"
 #include "device_launch_parameters.h"
 
-#define LearningRate 0.01f
+#define LearningRate 0.0005f
 
 texture<float, 2> MatrixesRef;
 texture<float, 2> FiltersRef;
@@ -214,77 +214,6 @@ void ConvolutionalLayer::backward(MatrixBlock& prev_gradient_matrixes) {
 
 void ConvolutionalLayer::correct() {
 	
-	//test
-	printf("\nConvolution layer:\n\n");
-	float* conv_gr_host = new float[gradients_device.matrixes_size * gradients_device.depth];
-	cudaMemcpy2D(conv_gr_host, gradients_device.matrixes_size * sizeof(float), gradients_device.data, gradients_device.pitch,
-		gradients_device.matrixes_size * sizeof(float), gradients_device.depth, cudaMemcpyDeviceToHost);
-	for (int i = 0; i < gradients_device.depth; i++)
-	{
-		for (int j = 0; j < gradients_device.rows_count; j++)
-		{
-			for (int l = 0; l < gradients_device.cols_count; l++)
-			{
-				printf("%f ", conv_gr_host[i * gradients_device.matrixes_size + j * gradients_device.cols_count + l]);
-			}
-			printf("\n");
-		}
-		printf("\n");
-	}
-	printf("\n");
-	free(conv_gr_host);
-
-	float* inputs_host = new float[inputs_device.matrixes_size * inputs_device.depth];
-	cudaMemcpy2D(inputs_host, inputs_device.matrixes_size * sizeof(float), inputs_device.data, inputs_device.pitch,
-		inputs_device.matrixes_size * sizeof(float), inputs_device.depth, cudaMemcpyDeviceToHost);
-	for (int i = 0; i < inputs_device.depth; i++)
-	{
-		for (int j = 0; j < inputs_device.rows_count; j++)
-		{
-			for (int l = 0; l < inputs_device.cols_count; l++)
-			{
-				printf("%f ", inputs_host[i * inputs_device.matrixes_size + j * inputs_device.cols_count + l]);
-			}
-			printf("\n");
-		}
-		printf("\n");
-	}
-	printf("\n");
-	free(inputs_host);
-
-	float* filters_host = new float[filters_device.matrixes_size * filters_device.depth];
-	cudaMemcpy2D(filters_host, filters_device.matrixes_size * sizeof(float), filters_device.data, filters_device.pitch, filters_device.matrixes_size * sizeof(float), filters_device.depth, cudaMemcpyDeviceToHost);
-	for (int i = 0; i < filters_device.depth; i++)
-	{
-		for (int j = 0; j < filters_device.rows_count; j++)
-		{
-			for (int l = 0; l < filters_device.cols_count; l++)
-			{
-				printf("%f ", filters_host[i * filters_device.matrixes_size + j * filters_device.cols_count + l]);
-			}
-			printf("\n");
-		}
-		printf("\n");
-	}
-	printf("\n");
-
-	float* outputs_host = new float[outputs_devices.matrixes_size * outputs_devices.depth];
-	cudaMemcpy2D(outputs_host, outputs_devices.matrixes_size * sizeof(float), outputs_devices.data, outputs_devices.pitch, outputs_devices.matrixes_size * sizeof(float), outputs_devices.depth, cudaMemcpyDeviceToHost);
-	for (int i = 0; i < outputs_devices.depth; i++)
-	{
-		for (int j = 0; j < outputs_devices.rows_count; j++)
-		{
-			for (int l = 0; l < outputs_devices.cols_count; l++)
-			{
-				printf("%f ", outputs_host[i * outputs_devices.matrixes_size + j * outputs_devices.cols_count + l]);
-			}
-			printf("\n");
-		}
-		printf("\n");
-	}
-	printf("\n");
-	free(outputs_host);
-
 	cudaBindTexture2D(0, FiltersRef, gradients_device.data, FiltersRef.channelDesc, gradients_device.matrixes_size, gradients_device.depth, gradients_device.pitch);
 	cudaBindTexture2D(0, MatrixesRef, inputs_device.data, MatrixesRef.channelDesc, inputs_device.matrixes_size, inputs_device.depth, inputs_device.pitch);
 	cudaBindTexture2D(0, OutputsRef, outputs_devices.data, OutputsRef.channelDesc, outputs_devices.matrixes_size, outputs_devices.depth, outputs_devices.pitch);
@@ -296,23 +225,6 @@ void ConvolutionalLayer::correct() {
 	cuda_correct_filters << <blocksPerGrid, threadsPerBlock >> > (filters_device.data, filters_device.cols_count, filters_device.rows_count, filters_device.pitch, gradients_device.cols_count, gradients_device.rows_count, inputs_device.depth, filters_device.depth);
 	cudaDeviceSynchronize();
 	cudacall(cudaGetLastError());
-
-	filters_host = new float[filters_device.matrixes_size * filters_device.depth];
-	cudaMemcpy2D(filters_host, filters_device.matrixes_size * sizeof(float), filters_device.data, filters_device.pitch, filters_device.matrixes_size * sizeof(float), filters_device.depth, cudaMemcpyDeviceToHost);
-	for (int i = 0; i < filters_device.depth; i++)
-	{
-		for (int j = 0; j < filters_device.rows_count; j++)
-		{
-			for (int l = 0; l < filters_device.cols_count; l++)
-			{
-				printf("%f ", filters_host[i * filters_device.matrixes_size + j * filters_device.cols_count + l]);
-			}
-			printf("\n");
-		}
-		printf("\n");
-	}
-	printf("\n");
-	free(filters_host);
 
 	cudaUnbindTexture(FiltersRef);
 	cudaUnbindTexture(MatrixesRef);
