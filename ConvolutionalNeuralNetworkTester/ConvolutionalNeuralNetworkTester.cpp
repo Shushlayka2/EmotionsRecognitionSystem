@@ -150,7 +150,7 @@ namespace ConvolutionalNeuralNetworkTester
 
 		TEST_METHOD(ConvolveTesting)
 		{
-			int filter_size = 3, amount_of_filters = 3,
+			int filter_size = 2, amount_of_filters = 2,
 				gradient_size = custom_device.cols_count - filter_size + 1;
 
 			ConvolutionalLayer conv_layer = ConvolutionalLayer(filter_size, amount_of_filters, gradient_size, filter_size);

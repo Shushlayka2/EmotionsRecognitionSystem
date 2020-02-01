@@ -43,6 +43,7 @@ void Network::correct(int correct_result) {
 	for (int i = fully_connected_layers_count - 1; i > 0; i--)
 	{
 		fullyConnectedLayers[i].backward(fullyConnectedLayers[i - 1].get_gradients());
+		fullyConnectedLayers[i].correct();
 	}
 
 	Tensor cur_gradients_mb = poolingLayers[convolutional_layers_count - 1].gradients_device;
@@ -56,19 +57,11 @@ void Network::correct(int correct_result) {
 	for (int i = convolutional_layers_count - 1; i > 0; i--)
 	{
 		poolingLayers[i].backward(convolutionalLayers[i].filters_gr_device);
+		convolutionalLayers[i].correct();
 		convolutionalLayers[i].backward(poolingLayers[i - 1].gradients_device);
 	}
 	poolingLayers[0].backward(convolutionalLayers[0].filters_gr_device);
-
-	for (int i = 0; i < convolutional_layers_count; i++)
-	{
-		convolutionalLayers[i].correct();
-	}
-
-	for (int i = 0; i < fully_connected_layers_count; i++)
-	{
-		fullyConnectedLayers[i].correct();
-	}
+	convolutionalLayers[0].correct();
 }
 
 void Network::init_layers() {
