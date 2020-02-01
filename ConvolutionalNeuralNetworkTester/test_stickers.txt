@@ -364,3 +364,7 @@ ConvolutionalLayer::correct (Mocks)
 	
 	printf("r_pos = %u gr_num = %u gr_pos = %u m_pos = %u l = %u: %f : out = %f inp = %f gr = %f\n", result_position, gr_num, gr_position, matrix_position, l, result_start[result_position], tex2D(OutputsRef, gr_position, gr_num), tex2D(MatrixesRef, matrix_position, l), tex2D(FiltersRef, gr_position, gr_num));
 	
+
+
+
+printf("Aft: idx = %u idy = %u: w = %f i = %f o = %f g = %f\n", idx, idy, weights[idy * inp_count + idx], inputs[idx], outputs[idy], gradients[idy]);

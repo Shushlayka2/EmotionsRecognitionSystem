@@ -2,7 +2,7 @@
 
 #include <vector>
 
-#include "MatrixBlock.h"
+#include "Tensor.h"
 #include "ConfigHandler.h"
 #include "ConvolutionalLayer.h"
 #include "PoolingLayer.h"
@@ -19,7 +19,7 @@ private:
 
 	ConfigHandler configurationHandler;
 
-	MatrixBlock inputs_device;
+	Tensor inputs_device;
 	std::vector<int> fully_connected_layers_neurons_count;
 	std::vector<ConvolutionalLayer> convolutionalLayers;
 	std::vector<PoolingLayer> poolingLayers;
@@ -31,7 +31,7 @@ public:
 	Network(ConfigHandler& configurationHandler);
 	void run();
 	void correct(int correct_result);
-	void set_inputs(MatrixBlock& image_matrix_block);
+	void set_inputs(Tensor& image_matrix_block);
 	void free_inputs();
 	int get_result();
 };

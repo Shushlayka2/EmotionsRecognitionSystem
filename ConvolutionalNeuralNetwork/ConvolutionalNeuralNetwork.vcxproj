@@ -98,7 +98,7 @@
     <ClInclude Include="Network.h" />
     <ClInclude Include="PoolingLayer.h" />
     <ClInclude Include="Random.h" />
-    <ClInclude Include="MatrixBlock.h" />
+    <ClInclude Include="Tensor.h" />
     <ClInclude Include="Trainer.h" />
   </ItemGroup>
   <ItemGroup>
@@ -107,7 +107,7 @@
     <ClCompile Include="CustomException.cpp" />
     <ClCompile Include="DigitImageLoadingService.cpp" />
     <ClCompile Include="ImageHandler.cpp" />
-    <ClCompile Include="MatrixBlock.cpp" />
+    <ClCompile Include="Tensor.cpp" />
     <ClCompile Include="Trainer.cpp" />
   </ItemGroup>
   <ItemGroup>

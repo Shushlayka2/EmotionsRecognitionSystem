@@ -20,8 +20,15 @@ __global__ void generate_normal_random_vector(float* arr, const int arr_size, co
 		arr[id] = curand_normal(&state);
 }
 
-float* set_normal_random(const int arr_size, const int depth, size_t& pitch)
+__global__ void set_repeatable_values(float* arr, const int arr_size, const float custom_val)
 {
+	int id = blockIdx.x * blockDim.x + threadIdx.x;
+	if (id < arr_size)
+		arr[id] = custom_val;
+}
+
+float* set_normal_random(const int arr_size, const int depth, size_t& pitch) {
+	
 	int common_size = arr_size * depth;
 	float* arr_device;
 	const int GRID_SIZE = common_size / BLOCK_SIZE + (common_size % BLOCK_SIZE != 0 ? 1 : 0);
@@ -43,4 +50,18 @@ float* set_normal_random(const int arr_size, const int depth, size_t& pitch)
 
 		return arr_2d_device;
 	}
+}
+
+float* set_repeatable_values(const int arr_size, const float custom_val) {
+
+	float* arr_device;
+	const int GRID_SIZE = arr_size / BLOCK_SIZE + (arr_size % BLOCK_SIZE != 0 ? 1 : 0);
+
+	cudaMalloc((void**)&arr_device, arr_size * sizeof(float));
+
+	set_repeatable_values << <GRID_SIZE, BLOCK_SIZE >> > (arr_device, arr_size, custom_val);
+	cudaDeviceSynchronize();
+	cudacall(cudaGetLastError());
+
+	return arr_device;
 }

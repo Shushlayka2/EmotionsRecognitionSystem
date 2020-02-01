@@ -1,7 +1,7 @@
 #pragma once
 #include <string>
 
-#include "MatrixBlock.h"
+#include "Tensor.h"
 
 class ImageHandler {
 private:
@@ -10,5 +10,5 @@ private:
 	std::string convert_id_to_file(const int id);
 
 public:
-	void convert(MatrixBlock& matrix_block, const int num, const int id);
+	void convert(Tensor& matrix_block, const int num, const int id);
 };

@@ -59,6 +59,16 @@ __global__ void cuda_correct_weights(float* inputs, float* outputs, float* gradi
 	}
 }
 
+//__global__ void cuda_correct_biases(float* outputs, float* gradients, float* biases, const int out_count)
+//{
+//	int idx = blockIdx.x * blockDim.x + threadIdx.x;
+//
+//	if (idx < out_count)
+//	{
+//		biases[idx] -= LearningRate * (outputs[idx] * ((idx == idy) - 1)) * gradients[idx];
+//	}
+//}
+
 FullyConnectedLayer::FullyConnectedLayer(int in_size, int out_size) {
 	this->in_size = in_size;
 	this->out_size = out_size;

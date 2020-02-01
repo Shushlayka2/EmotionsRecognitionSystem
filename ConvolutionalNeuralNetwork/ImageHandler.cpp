@@ -14,7 +14,7 @@ std::string ImageHandler::convert_id_to_file(const int id) {
 	return id_str;
 }
 
-void ImageHandler::convert(MatrixBlock& matrix_block, const int num, const int id) {
+void ImageHandler::convert(Tensor& matrix_block, const int num, const int id) {
 	cv::Mat image = cv::imread(directory_path + "\\" + std::to_string(num) + "\\" + convert_id_to_file(id));
 	matrix_block.cols_count = image.cols; matrix_block.rows_count = image.rows;
 	matrix_block.matrixes_size = image.cols * image.rows; matrix_block.depth = image.dims - 1;

@@ -21,17 +21,17 @@ namespace ConvolutionalNeuralNetworkTester
 	{
 	private:
 		std::fstream file;
-		MatrixBlock inputs_device;
-		MatrixBlock custom_device;
-		MatrixBlock gradients_device;
+		Tensor inputs_device;
+		Tensor custom_device;
+		Tensor gradients_device;
 
-		void host_to_device(MatrixBlock& mb) {
+		void host_to_device(Tensor& mb) {
 			float* data_host = mb.data;
 			cudaMallocPitch((void**)&mb.data, &mb.pitch, mb.matrixes_size * sizeof(float), mb.depth);
 			cudaMemcpy2D(mb.data, mb.pitch, data_host, mb.matrixes_size * sizeof(float), mb.matrixes_size * sizeof(float), mb.depth, cudaMemcpyHostToDevice);
 		}
 
-		float* matrix_to_vector(MatrixBlock& mb) {
+		float* matrix_to_vector(Tensor& mb) {
 
 			float* vector;
 			cudaMalloc((void**)&vector, mb.matrixes_size * mb.depth * sizeof(float));
@@ -40,8 +40,8 @@ namespace ConvolutionalNeuralNetworkTester
 			return vector;
 		}
 
-		MatrixBlock& init_custom_inputs() {
-			MatrixBlock result = MatrixBlock(5, 5, 1);
+		Tensor& init_custom_inputs() {
+			Tensor result = Tensor(5, 5, 1);
 			result.data = new float[25];
 			for (int i = 0; i < 25; i++)
 				result.data[i] = i;
@@ -49,8 +49,8 @@ namespace ConvolutionalNeuralNetworkTester
 			return result;
 		}
 		
-		MatrixBlock& init_gradients() {
-			MatrixBlock result = MatrixBlock(5, 5, 1);
+		Tensor& init_gradients() {
+			Tensor result = Tensor(5, 5, 1);
 			cudaMallocPitch((void**)&result.data, &result.pitch, result.matrixes_size * sizeof(float), result.depth);
 			return result;
 		}
@@ -60,7 +60,7 @@ namespace ConvolutionalNeuralNetworkTester
 		{
 			int number_of_images;
 			file.open("C:\\Users\\Bulat\\source\\repos\\EmotionsRecognitionSystem\\ConvolutionalNeuralNetworkTester\\result.txt", std::ios::out);
-			MatrixBlock* training_dataset = DigitImageLoadingService::read_mnist_images("C:\\Users\\Bulat\\source\\repos\\EmotionsRecognitionSystem\\ConvolutionalNeuralNetwork\\train-images.idx3-ubyte", number_of_images);
+			Tensor* training_dataset = DigitImageLoadingService::read_mnist_images("C:\\Users\\Bulat\\source\\repos\\EmotionsRecognitionSystem\\ConvolutionalNeuralNetwork\\train-images.idx3-ubyte", number_of_images);
 			host_to_device(training_dataset[0]);
 			inputs_device = training_dataset[0];
 			custom_device = init_custom_inputs();
@@ -178,7 +178,7 @@ namespace ConvolutionalNeuralNetworkTester
 			file << std::endl;
 
 			cudaFree(gradients_device.data);
-			gradients_device = conv_layer.gradients_device;
+			gradients_device = conv_layer.filters_gr_device;
 
 			free(output_host);
 		}

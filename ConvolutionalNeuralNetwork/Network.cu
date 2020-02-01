@@ -19,12 +19,12 @@ Network::Network(ConfigHandler& configurationHandler) {
 
 void Network::run() {
 	
-	MatrixBlock& current_matrix_block = inputs_device;
+	Tensor& current_matrix_block = inputs_device;
 
 	for (int i = 0; i < convolutional_layers_count; i++)
 	{
 		current_matrix_block = convolutionalLayers[i].forward(current_matrix_block);
-		current_matrix_block = poolingLayers[i].forward(current_matrix_block, convolutionalLayers[i].gradients_device);
+		current_matrix_block = poolingLayers[i].forward(current_matrix_block, convolutionalLayers[i].filters_gr_device);
 	}
 
 	float* current_input_vector;
@@ -45,7 +45,7 @@ void Network::correct(int correct_result) {
 		fullyConnectedLayers[i].backward(fullyConnectedLayers[i - 1].get_gradients());
 	}
 
-	MatrixBlock cur_gradients_mb = poolingLayers[convolutional_layers_count - 1].gradients_device;
+	Tensor cur_gradients_mb = poolingLayers[convolutional_layers_count - 1].gradients_device;
 	float* first_pl_gr_vector_device;
 	cudaMalloc((void**)&first_pl_gr_vector_device, cur_gradients_mb.matrixes_size * cur_gradients_mb.depth * sizeof(float));
 	fullyConnectedLayers[0].backward(first_pl_gr_vector_device);
@@ -55,10 +55,10 @@ void Network::correct(int correct_result) {
 
 	for (int i = convolutional_layers_count - 1; i > 0; i--)
 	{
-		poolingLayers[i].backward(convolutionalLayers[i].gradients_device);
+		poolingLayers[i].backward(convolutionalLayers[i].filters_gr_device);
 		convolutionalLayers[i].backward(poolingLayers[i - 1].gradients_device);
 	}
-	poolingLayers[0].backward(convolutionalLayers[0].gradients_device);
+	poolingLayers[0].backward(convolutionalLayers[0].filters_gr_device);
 
 	for (int i = 0; i < convolutional_layers_count; i++)
 	{
@@ -100,7 +100,7 @@ void Network::init_layers() {
 	}
 }
 
-void Network::set_inputs(MatrixBlock& image_matrix_block) {
+void Network::set_inputs(Tensor& image_matrix_block) {
 
 	inputs_device = image_matrix_block;
 	float* data_host = image_matrix_block.data;

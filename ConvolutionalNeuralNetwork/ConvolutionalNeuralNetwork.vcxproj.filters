@@ -16,6 +16,7 @@
     <CudaCompile Include="FullyConnectedLayer.cu">
       <Filter>Source Files\Models\Layers</Filter>
     </CudaCompile>
+    <CudaCompile Include="Network.cu" />
   </ItemGroup>
   <ItemGroup>
     <Filter Include="Header Files">
@@ -65,9 +66,6 @@
     <ClInclude Include="ConvolutionalLayer.h">
       <Filter>Header Files\Models\Layers</Filter>
     </ClInclude>
-    <ClInclude Include="MatrixBlock.h">
-      <Filter>Header Files\Models</Filter>
-    </ClInclude>
     <ClInclude Include="Network.h">
       <Filter>Header Files\Models</Filter>
     </ClInclude>
@@ -79,6 +77,9 @@
     </ClInclude>
     <ClInclude Include="DigitImageLoadingService.h">
       <Filter>Header Files\Utilities</Filter>
+    </ClInclude>
+    <ClInclude Include="Tensor.h">
+      <Filter>Header Files\Models</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
@@ -97,13 +98,10 @@
     <ClCompile Include="Trainer.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="MatrixBlock.cpp">
-      <Filter>Source Files\Models</Filter>
-    </ClCompile>
     <ClCompile Include="DigitImageLoadingService.cpp">
       <Filter>Source Files\Utilities</Filter>
     </ClCompile>
-    <ClCompile Include="Network.cu">
+    <ClCompile Include="Tensor.cpp">
       <Filter>Source Files\Models</Filter>
     </ClCompile>
   </ItemGroup>

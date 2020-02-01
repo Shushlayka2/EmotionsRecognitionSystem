@@ -1,21 +1,23 @@
 #pragma once
 
-#include "MatrixBlock.h"
+#include "Tensor.h"
 
 class ConvolutionalLayer {
 private:
-	MatrixBlock inputs_device;
-	MatrixBlock filters_device;
-	MatrixBlock outputs_devices;
+	Tensor inputs_device;
+	Tensor filters_device;
+	Tensor outputs_devices;
+	float* biases_device;
 	void convolve();
 	void activate();
 
 public:
-	MatrixBlock gradients_device;
+	Tensor filters_gr_device;
+	float* biases_gr_device;
 
 	ConvolutionalLayer(const int filters_size, const int filters_count, const int gradients_size, const int gradients_depth);
-	MatrixBlock& forward(MatrixBlock& input_matrixes);
-	void backward(MatrixBlock& prev_gradient_matrixes);
+	Tensor& forward(Tensor& input_matrixes);
+	void backward(Tensor& prev_gradient_matrixes);
 	void correct();
 	void freeMemory();
 };
