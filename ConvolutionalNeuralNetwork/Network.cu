@@ -43,7 +43,6 @@ void Network::correct(int correct_result) {
 	for (int i = fully_connected_layers_count - 1; i > 0; i--)
 	{
 		fullyConnectedLayers[i].backward(fullyConnectedLayers[i - 1].get_gradients());
-		fullyConnectedLayers[i].correct();
 	}
 
 	Tensor cur_gradients_mb = poolingLayers[convolutional_layers_count - 1].gradients_device;

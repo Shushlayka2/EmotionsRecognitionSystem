@@ -15,6 +15,7 @@ private:
 	size_t weights_pitch;
 	cublasHandle_t handle;
 
+	void correct();
 	void add_biases(cublasHandle_t& handle);
 	void activate_softmax(cublasHandle_t& handle);
 	void m_v_multiplication(float* matrix, float* vector, float* result_vector, cublasHandle_t& handle, cublasOperation_t trans = CUBLAS_OP_T);
@@ -25,7 +26,6 @@ public:
 	float* get_gradients();
 	float* forward(float* prev_layer_data);
 	void backward(float* prev_layer_gradients);
-	void correct();
 	int get_result();
 	void freeMemory();
 };

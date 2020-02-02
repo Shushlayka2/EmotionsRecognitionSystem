@@ -48,6 +48,17 @@ __global__ void cuda_set_gradients(float* gradients, float* outputs, const int n
 		gradients[idx] = outputs[idx] - 1;
 }
 
+__global__ void cuda_extend_weights(float* outputs, float* ext_weights, const int inp_count, const int out_count)
+{
+	int idx = blockIdx.x * blockDim.x + threadIdx.x;
+	int idy = blockIdx.y * blockDim.y + threadIdx.y;
+
+	if (idx < inp_count && idy < out_count)
+	{
+		ext_weights[idy * inp_count + idx] *= outputs[idy] * ((idx == idy) - outputs[idx]);
+	}
+}
+
 __global__ void cuda_correct_weights(float* outputs, float* inputs, float* gradients, float* weights, const int inp_count, const int out_count)
 {
 	int idx = blockIdx.x * blockDim.x + threadIdx.x;
@@ -92,7 +103,20 @@ float* FullyConnectedLayer::forward(float* prev_layer_data) {
 
 void FullyConnectedLayer::backward(float* prev_layer_gradients) {
 
-	m_v_multiplication(weights_device, gradients_device, prev_layer_gradients, handle, CUBLAS_OP_N);
+	float* ext_weights_device;
+	cudaMalloc((void**)&ext_weights_device, in_size * out_size * sizeof(float));
+	cudaMemcpy(ext_weights_device, weights_device, in_size * out_size * sizeof(float), cudaMemcpyDeviceToDevice);
+
+	dim3 threadsPerBlock = dim3(DOUBLE_BLOCK_SIZE, DOUBLE_BLOCK_SIZE);
+	dim3 blocksPerGrid = dim3(in_size / DOUBLE_BLOCK_SIZE + (in_size % DOUBLE_BLOCK_SIZE == 0 ? 0 : 1),
+		out_size / DOUBLE_BLOCK_SIZE + (out_size % DOUBLE_BLOCK_SIZE == 0 ? 0 : 1));
+	
+	cuda_extend_weights << <blocksPerGrid, threadsPerBlock >> > (outputs_device, ext_weights_device, in_size, out_size);
+	cudaDeviceSynchronize();
+	cudacall(cudaGetLastError());
+
+	m_v_multiplication(ext_weights_device, gradients_device, prev_layer_gradients, handle, CUBLAS_OP_N);
+	correct();
 }
 
 void FullyConnectedLayer::correct() {
