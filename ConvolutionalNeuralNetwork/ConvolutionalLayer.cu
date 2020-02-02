@@ -70,7 +70,7 @@ __global__ void cuda_cross_correlation(float* prev_gradients, const int prev_gr_
 	}
 }
 
-__global__ void cuda_correct_filters(float* filters, float* biases, const int fl_cols, const int fl_rows, size_t fl_pitch, const int gr_cols, const int gr_rows, const int in_cols, const int in_count, const int fl_count)
+__global__ void cuda_correct_filters(float* filters, const int fl_cols, const int fl_rows, size_t fl_pitch, const int gr_cols, const int gr_rows, const int in_cols, const int in_count, const int fl_count)
 {
 	int x = blockDim.x * blockIdx.x + threadIdx.x;
 	int y = blockDim.y * blockIdx.y + threadIdx.y;
@@ -93,9 +93,25 @@ __global__ void cuda_correct_filters(float* filters, float* biases, const int fl
 					delta_sum += (tex2D(OutputsRef, gr_position, gr_num) > 0.0f)* tex2D(MatrixesRef, matrix_position, l)* tex2D(FiltersRef, gr_position, gr_num);
 				}
 			}
-			biases[gr_num] += tex2D(FiltersRef, gr_position, gr_num);
 		}
 		filter_matrix_start[filter_position] -= LearningRate * delta_sum;
+	}
+}
+
+__global__ void cuda_correct_biases(float* biases, const int b_size, const int gr_cols, const int gr_rows)
+{
+	int x = blockDim.x * blockIdx.x + threadIdx.x;
+	if (x < b_size)
+	{
+		float sum = 0.0f;
+		for (int i = 0; i < gr_rows; i++)
+		{
+			for (int j = 0; j < gr_cols; j++)
+			{
+				sum = tex2D(FiltersRef, i * gr_cols + j, x);
+			}
+		}
+		biases[x] -= LearningRate * sum;
 	}
 }
 
@@ -104,8 +120,8 @@ ConvolutionalLayer::ConvolutionalLayer(const int filters_size, const int filters
 	filters_device = Tensor(filters_size, filters_size, filters_count);
 	filters_device.data = set_normal_random(filters_size * filters_size, filters_count, filters_device.pitch);
 
-	filters_gr_device = Tensor(outputs_size, outputs_size, outputs_depth);
-	cudaMallocPitch((void**)&filters_gr_device.data, &filters_gr_device.pitch, filters_gr_device.matrixes_size * sizeof(float), filters_gr_device.depth);
+	gradients_device = Tensor(outputs_size, outputs_size, outputs_depth);
+	cudaMallocPitch((void**)&gradients_device.data, &gradients_device.pitch, gradients_device.matrixes_size * sizeof(float), gradients_device.depth);
 
 	biases_device = set_repeatable_values(outputs_depth, 0.01f);
 }
@@ -140,13 +156,13 @@ Tensor& ConvolutionalLayer::forward(Tensor& input_matrixes) {
 void ConvolutionalLayer::backward(Tensor& prev_gradient_matrixes) {
 
 	cudaBindTexture2D(0, FiltersRef, filters_device.data, FiltersRef.channelDesc, filters_device.matrixes_size, filters_device.depth, filters_device.pitch);
-	cudaBindTexture2D(0, MatrixesRef, filters_gr_device.data, MatrixesRef.channelDesc, filters_gr_device.matrixes_size, filters_gr_device.depth, filters_gr_device.pitch);
+	cudaBindTexture2D(0, MatrixesRef, gradients_device.data, MatrixesRef.channelDesc, gradients_device.matrixes_size, gradients_device.depth, gradients_device.pitch);
 
 	dim3 threadsPerBlock = dim3(32, 32, 1);
 	dim3 blocksPerGrid = dim3(prev_gradient_matrixes.cols_count / 32 + (prev_gradient_matrixes.cols_count % 32 == 0 ? 0 : 1),
 		prev_gradient_matrixes.rows_count / 32 + (prev_gradient_matrixes.rows_count % 32 == 0 ? 0 : 1), prev_gradient_matrixes.depth);
 	
-	cuda_cross_correlation << <blocksPerGrid, threadsPerBlock >> > (prev_gradient_matrixes.data, prev_gradient_matrixes.cols_count, prev_gradient_matrixes.rows_count, prev_gradient_matrixes.pitch, filters_gr_device.cols_count, filters_gr_device.rows_count, filters_device.cols_count, filters_device.depth, filters_device.cols_count - 1);
+	cuda_cross_correlation << <blocksPerGrid, threadsPerBlock >> > (prev_gradient_matrixes.data, prev_gradient_matrixes.cols_count, prev_gradient_matrixes.rows_count, prev_gradient_matrixes.pitch, gradients_device.cols_count, gradients_device.rows_count, filters_device.cols_count, filters_device.depth, filters_device.cols_count - 1);
 	cudaDeviceSynchronize();
 	cudacall(cudaGetLastError());
 
@@ -156,15 +172,22 @@ void ConvolutionalLayer::backward(Tensor& prev_gradient_matrixes) {
 
 void ConvolutionalLayer::correct() {
 	
-	cudaBindTexture2D(0, FiltersRef, filters_gr_device.data, FiltersRef.channelDesc, filters_gr_device.matrixes_size, filters_gr_device.depth, filters_gr_device.pitch);
+	cudaBindTexture2D(0, FiltersRef, gradients_device.data, FiltersRef.channelDesc, gradients_device.matrixes_size, gradients_device.depth, gradients_device.pitch);
 	cudaBindTexture2D(0, MatrixesRef, inputs_device.data, MatrixesRef.channelDesc, inputs_device.matrixes_size, inputs_device.depth, inputs_device.pitch);
 	cudaBindTexture2D(0, OutputsRef, outputs_devices.data, OutputsRef.channelDesc, outputs_devices.matrixes_size, outputs_devices.depth, outputs_devices.pitch);
 	
 	dim3 threadsPerBlock = dim3(32, 32, 1);
-	dim3 blocksPerGrid = dim3(filters_gr_device.cols_count / 32 + (filters_gr_device.cols_count % 32 == 0 ? 0 : 1),
-		filters_gr_device.rows_count / 32 + (filters_gr_device.rows_count % 32 == 0 ? 0 : 1), filters_device.depth);
+	dim3 blocksPerGrid = dim3(gradients_device.cols_count / 32 + (gradients_device.cols_count % 32 == 0 ? 0 : 1),
+		gradients_device.rows_count / 32 + (gradients_device.rows_count % 32 == 0 ? 0 : 1), filters_device.depth);
 	
-	cuda_correct_filters << <blocksPerGrid, threadsPerBlock >> > (filters_device.data, biases_device, filters_device.cols_count, filters_device.rows_count, filters_device.pitch, filters_gr_device.cols_count, filters_gr_device.rows_count, inputs_device.rows_count, inputs_device.depth, filters_device.depth);
+	cuda_correct_filters << <blocksPerGrid, threadsPerBlock >> > (filters_device.data, filters_device.cols_count, filters_device.rows_count, filters_device.pitch, gradients_device.cols_count, gradients_device.rows_count, inputs_device.rows_count, inputs_device.depth, filters_device.depth);
+	cudaDeviceSynchronize();
+	cudacall(cudaGetLastError());
+
+	threadsPerBlock = dim3(256);
+	blocksPerGrid = dim3(gradients_device.depth / 256 + (gradients_device.depth % 256 == 0 ? 0 : 1));
+	
+	cuda_correct_biases << <blocksPerGrid, threadsPerBlock >> > (biases_device, gradients_device.depth, gradients_device.cols_count, gradients_device.rows_count);
 	cudaDeviceSynchronize();
 	cudacall(cudaGetLastError());
 
@@ -176,6 +199,6 @@ void ConvolutionalLayer::correct() {
 void ConvolutionalLayer::freeMemory() {
 	cudaFree(inputs_device.data);
 	cudaFree(filters_device.data);
-	cudaFree(filters_gr_device.data);
+	cudaFree(gradients_device.data);
 	cudaFree(outputs_devices.data);
 }

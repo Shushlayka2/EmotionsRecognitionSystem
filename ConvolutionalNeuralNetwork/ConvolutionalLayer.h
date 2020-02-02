@@ -10,8 +10,7 @@ private:
 	float* biases_device;
 
 public:
-	Tensor filters_gr_device;
-	float* biases_gr_device;
+	Tensor gradients_device;
 
 	ConvolutionalLayer(const int filters_size, const int filters_count, const int outputs_size, const int outputs_depth);
 	Tensor& forward(Tensor& input_matrixes);

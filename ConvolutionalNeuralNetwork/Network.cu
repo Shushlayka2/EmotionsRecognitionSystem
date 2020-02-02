@@ -24,7 +24,7 @@ void Network::run() {
 	for (int i = 0; i < convolutional_layers_count; i++)
 	{
 		current_matrix_block = convolutionalLayers[i].forward(current_matrix_block);
-		current_matrix_block = poolingLayers[i].forward(current_matrix_block, convolutionalLayers[i].filters_gr_device);
+		current_matrix_block = poolingLayers[i].forward(current_matrix_block, convolutionalLayers[i].gradients_device);
 	}
 
 	float* current_input_vector;
@@ -56,11 +56,11 @@ void Network::correct(int correct_result) {
 
 	for (int i = convolutional_layers_count - 1; i > 0; i--)
 	{
-		poolingLayers[i].backward(convolutionalLayers[i].filters_gr_device);
+		poolingLayers[i].backward(convolutionalLayers[i].gradients_device);
 		convolutionalLayers[i].correct();
 		convolutionalLayers[i].backward(poolingLayers[i - 1].gradients_device);
 	}
-	poolingLayers[0].backward(convolutionalLayers[0].filters_gr_device);
+	poolingLayers[0].backward(convolutionalLayers[0].gradients_device);
 	convolutionalLayers[0].correct();
 }
 

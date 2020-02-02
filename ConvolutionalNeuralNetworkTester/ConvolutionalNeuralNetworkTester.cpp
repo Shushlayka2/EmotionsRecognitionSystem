@@ -178,7 +178,7 @@ namespace ConvolutionalNeuralNetworkTester
 			file << std::endl;
 
 			cudaFree(gradients_device.data);
-			gradients_device = conv_layer.filters_gr_device;
+			gradients_device = conv_layer.gradients_device;
 
 			free(output_host);
 		}
