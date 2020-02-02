@@ -150,7 +150,7 @@ namespace ConvolutionalNeuralNetworkTester
 
 		TEST_METHOD(ConvolveTesting)
 		{
-			int filter_size = 2, amount_of_filters = 2,
+			int filter_size = 3, amount_of_filters = 3,
 				gradient_size = custom_device.cols_count - filter_size + 1;
 
 			ConvolutionalLayer conv_layer = ConvolutionalLayer(filter_size, amount_of_filters, gradient_size, filter_size);
@@ -185,7 +185,7 @@ namespace ConvolutionalNeuralNetworkTester
 
 		TEST_METHOD(PoolingTesting)
 		{
-			int filter_size = 2, gradient_size = custom_device.cols_count / 2 + (custom_device.cols_count % 2 == 0 ? 0 : 1);
+			int filter_size = 2, gradient_size = custom_device.cols_count / filter_size + (custom_device.cols_count % filter_size == 0 ? 0 : 1);
 			PoolingLayer pooling_layer = PoolingLayer(filter_size, gradient_size, custom_device.depth);
 
 			custom_device = pooling_layer.forward(custom_device, gradients_device);

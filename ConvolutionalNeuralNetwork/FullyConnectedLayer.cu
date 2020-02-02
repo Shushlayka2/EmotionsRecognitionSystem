@@ -45,35 +45,35 @@ __global__ void cuda_set_gradients(float* gradients, float* outputs, const int n
 	int idx = blockIdx.x * blockDim.x + threadIdx.x;
 	gradients[idx] = outputs[idx];
 	if (idx == num)
-		gradients[idx] = 1 - outputs[idx];
+		gradients[idx] = outputs[idx] - 1;
 }
 
-__global__ void cuda_correct_weights(float* inputs, float* outputs, float* gradients, float* weights, const int inp_count, const int out_count)
+__global__ void cuda_correct_weights(float* outputs, float* inputs, float* gradients, float* weights, const int inp_count, const int out_count)
 {
 	int idx = blockIdx.x * blockDim.x + threadIdx.x;
 	int idy = blockIdx.y * blockDim.y + threadIdx.y;
 
 	if (idx < inp_count && idy < out_count)
 	{
-		weights[idy * inp_count + idx] -= LearningRate * (outputs[idy] * ((idx == idy) - inputs[idx])) * inputs[idx] * gradients[idy];
+		weights[idy * inp_count + idx] -= LearningRate * (outputs[idy] * ((idx == idy) - outputs[idx])) * inputs[idx] * gradients[idy];
 	}
 }
 
-//__global__ void cuda_correct_biases(float* outputs, float* gradients, float* biases, const int out_count)
-//{
-//	int idx = blockIdx.x * blockDim.x + threadIdx.x;
-//
-//	if (idx < out_count)
-//	{
-//		biases[idx] -= LearningRate * (outputs[idx] * ((idx == idy) - 1)) * gradients[idx];
-//	}
-//}
+__global__ void cuda_correct_biases(float* outputs, float* gradients, float* biases, const int out_count)
+{
+	int idx = blockIdx.x * blockDim.x + threadIdx.x;
+
+	if (idx < out_count)
+	{
+		biases[idx] -= LearningRate * (outputs[idx] * (1 - outputs[idx])) * gradients[idx];
+	}
+}
 
 FullyConnectedLayer::FullyConnectedLayer(int in_size, int out_size) {
 	this->in_size = in_size;
 	this->out_size = out_size;
 	weights_device = set_normal_random(in_size * out_size, 1, weights_pitch);
-	biases_device = set_normal_random(out_size, 1, weights_pitch);
+	biases_device = set_repeatable_values(out_size, 0.01f);
 	cudaMalloc((void**)&gradients_device, out_size * sizeof(float));
 	cudaMalloc((void**)&outputs_device, out_size * sizeof(float));
 	cublasCreate(&handle);
@@ -102,6 +102,12 @@ void FullyConnectedLayer::correct() {
 		out_size / DOUBLE_BLOCK_SIZE + (out_size % DOUBLE_BLOCK_SIZE == 0 ? 0 : 1));
 	
 	cuda_correct_weights << <blocksPerGrid, threadsPerBlock >> > (inputs_device, outputs_device, gradients_device, weights_device, in_size, out_size);
+	cudaDeviceSynchronize();
+	cudacall(cudaGetLastError());
+
+	threadsPerBlock = BLOCK_SIZE;
+	blocksPerGrid = out_size / BLOCK_SIZE + (out_size % BLOCK_SIZE == 0 ? 0 : 1);
+	cuda_correct_biases << <blocksPerGrid, threadsPerBlock >> > (outputs_device, gradients_device, biases_device, out_size);
 	cudaDeviceSynchronize();
 	cudacall(cudaGetLastError());
 }
