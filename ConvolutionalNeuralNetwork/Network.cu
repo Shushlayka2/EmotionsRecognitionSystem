@@ -31,6 +31,16 @@ void Network::run() {
 	cudaMalloc((void**)&current_input_vector, current_matrix_block.matrixes_size * current_matrix_block.depth * sizeof(float));
 	cudaMemcpy2D(current_input_vector, current_matrix_block.matrixes_size * sizeof(float), current_matrix_block.data, current_matrix_block.pitch,
 		current_matrix_block.matrixes_size * sizeof(float), current_matrix_block.depth, cudaMemcpyDeviceToDevice);
+
+	//test
+	printf("Fully Connected Forward:\n");
+	printf("Inputs:\n");
+	float* inputs_host = new float[current_matrix_block.matrixes_size * current_matrix_block.depth];
+	cudaMemcpy(inputs_host, current_input_vector, current_matrix_block.matrixes_size * current_matrix_block.depth * sizeof(float), cudaMemcpyDeviceToHost);
+	for (int i = 0; i < current_matrix_block.matrixes_size * current_matrix_block.depth; i++)
+		printf("%f ", inputs_host[i]);
+	printf("\n");
+
 	for (int i = 0; i < fully_connected_layers_count; i++)
 	{
 		current_input_vector = fullyConnectedLayers[i].forward(current_input_vector);

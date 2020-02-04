@@ -1,0 +1,65 @@
+void ConvolutionalLayer::backward(Tensor& prev_gradient_matrixes) {
+
+	//mock
+	float* filters_host = new float[filters_device.depth * filters_device.matrixes_size];
+	for (int i = 0; i < filters_device.depth; i++)
+		for (int j = 0; j < filters_device.rows_count; j++)
+			for (int l = 0; l < filters_device.cols_count; l++)
+				filters_host[i * filters_device.matrixes_size + j * filters_device.cols_count + l] = i * filters_device.matrixes_size + j * filters_device.cols_count + l;
+	cudaFree(filters_device.data);
+	cudaMallocPitch((void**)&filters_device.data, &filters_device.pitch, filters_device.matrixes_size * sizeof(float), filters_device.depth);
+	cudaMemcpy2D(filters_device.data, filters_device.pitch, filters_host, filters_device.matrixes_size * sizeof(float), filters_device.matrixes_size * sizeof(float), filters_device.depth, cudaMemcpyHostToDevice);
+	free(filters_host);
+
+	gradients_device.cols_count = 3;  gradients_device.rows_count = 3; gradients_device.matrixes_size = 9; gradients_device.depth = 3;
+	float* gradients_host = new float[gradients_device.depth * gradients_device.matrixes_size];
+	for (int i = 0; i < gradients_device.depth; i++)
+		for (int j = 0; j < gradients_device.rows_count; j++)
+			for (int l = 0; l < gradients_device.cols_count; l++)
+				gradients_host[i * gradients_device.matrixes_size + j * gradients_device.cols_count + l] = i * gradients_device.matrixes_size + j * gradients_device.cols_count + l;
+	
+	cudaFree(gradients_device.data);
+	cudaMallocPitch((void**)&gradients_device.data, &gradients_device.pitch, gradients_device.matrixes_size * sizeof(float), gradients_device.depth);
+	cudaMemcpy2D(gradients_device.data, gradients_device.pitch, gradients_host, gradients_device.matrixes_size * sizeof(float), gradients_device.matrixes_size * sizeof(float), gradients_device.depth, cudaMemcpyHostToDevice);
+	free(gradients_host);
+
+	prev_gradient_matrixes.cols_count = 5; prev_gradient_matrixes.rows_count = 5; prev_gradient_matrixes.matrixes_size = 25; prev_gradient_matrixes.depth = 1;
+	cudaFree(prev_gradient_matrixes.data);
+	cudaMallocPitch((void**)&prev_gradient_matrixes.data, &prev_gradient_matrixes.pitch, prev_gradient_matrixes.matrixes_size * sizeof(float), prev_gradient_matrixes.depth);
+
+	cudaBindTexture2D(0, FiltersRef, filters_device.data, FiltersRef.channelDesc, filters_device.matrixes_size, filters_device.depth, filters_device.pitch);
+	cudaBindTexture2D(0, MatrixesRef, gradients_device.data, MatrixesRef.channelDesc, gradients_device.matrixes_size, gradients_device.depth, gradients_device.pitch);
+
+	dim3 threadsPerBlock = dim3(32, 32, 1);
+	dim3 blocksPerGrid = dim3(prev_gradient_matrixes.cols_count / 32 + (prev_gradient_matrixes.cols_count % 32 == 0 ? 0 : 1),
+		prev_gradient_matrixes.rows_count / 32 + (prev_gradient_matrixes.rows_count % 32 == 0 ? 0 : 1), prev_gradient_matrixes.depth);
+	
+	cuda_cross_correlation << <blocksPerGrid, threadsPerBlock >> > (prev_gradient_matrixes.data, prev_gradient_matrixes.cols_count, prev_gradient_matrixes.rows_count, prev_gradient_matrixes.pitch, gradients_device.cols_count, gradients_device.rows_count, filters_device.cols_count, filters_device.depth, filters_device.cols_count - 1);
+	cudaDeviceSynchronize();
+	cudacall(cudaGetLastError());
+
+	//assert
+	float* prev_gr_host = new float[prev_gradient_matrixes.matrixes_size * prev_gradient_matrixes.depth];
+	cudaMemcpy2D(prev_gr_host, prev_gradient_matrixes.matrixes_size * sizeof(float), prev_gradient_matrixes.data, prev_gradient_matrixes.pitch,
+		prev_gradient_matrixes.matrixes_size * sizeof(float), prev_gradient_matrixes.depth, cudaMemcpyDeviceToHost);
+	for (int i = 0; i < prev_gradient_matrixes.depth; i++)
+	{
+		for (int j = 0; j < prev_gradient_matrixes.rows_count; j++)
+		{
+			for (int l = 0; l < prev_gradient_matrixes.cols_count; l++)
+			{
+				printf("%f ", prev_gr_host[i * prev_gradient_matrixes.matrixes_size + j * prev_gradient_matrixes.cols_count + l]);
+			}
+			printf("\n");
+		}
+		printf("\n");
+	}
+	printf("\n");
+	free(prev_gr_host);
+
+	cudaUnbindTexture(FiltersRef);
+	cudaUnbindTexture(MatrixesRef);
+}
+
+delta_sum += is_inside * tex2D(MatrixesRef, matrix_position, z * filters_count + l) * tex2D(FiltersRef, filter_position, l);
+					printf("ins = %f gr = %f fl = %f pr_gr_pos = %d gr_num = %d f_num = %d\n", is_inside, tex2D(MatrixesRef, matrix_position, z * filters_count + l), tex2D(FiltersRef, filter_position, l), prev_gradient_position, z * filters_count + l, l);

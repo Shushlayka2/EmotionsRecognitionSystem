@@ -1,0 +1,49 @@
+float* FullyConnectedLayer::forward(float* prev_layer_data) {
+
+	//mock
+	in_size = 5; out_size = 3;
+	float* weights_host = new float[out_size * in_size];
+	float* prev_layer_data_host = new float[in_size];
+	for (int i = 0; i < out_size * in_size; i++)
+		weights_host[i] = i;
+	for (int i = 0; i < in_size; i++)
+		prev_layer_data_host[i] = i;
+	cudaMemcpy(weights_device, weights_host, out_size * in_size * sizeof(float), cudaMemcpyHostToDevice);
+	cudaMemcpy(prev_layer_data, prev_layer_data_host, in_size * sizeof(float), cudaMemcpyHostToDevice);
+	free(weights_host);
+	free(prev_layer_data_host);
+
+	inputs_device = prev_layer_data;
+
+	m_v_multiplication(weights_device, inputs_device, outputs_device, handle);
+
+	//assert
+	float* outputs_host = new float[out_size];
+	cudaMemcpy(outputs_host, outputs_device, out_size * sizeof(float), cudaMemcpyDeviceToHost);
+	for (int i = 0; i < out_size; i++)
+		printf("%f ", outputs_host[i]);
+	printf("\n");
+
+	add_biases(handle);
+
+	//assert
+	cudaMemcpy(outputs_host, outputs_device, out_size * sizeof(float), cudaMemcpyDeviceToHost);
+	for (int i = 0; i < out_size; i++)
+		printf("%f ", outputs_host[i]);
+	printf("\n");
+
+	//mock
+	outputs_host[0] = 3; outputs_host[1] = 4; outputs_host[2] = 1;
+	cudaMemcpy(outputs_device, outputs_host, out_size * sizeof(float), cudaMemcpyHostToDevice);
+
+	activate_softmax(handle);
+
+	//assert
+	cudaMemcpy(outputs_host, outputs_device, out_size * sizeof(float), cudaMemcpyDeviceToHost);
+	for (int i = 0; i < out_size; i++)
+		printf("%f ", outputs_host[i]);
+	printf("\n");
+	//https://keisan.casio.com/exec/system/15168444286206
+
+	return outputs_device;
+}
