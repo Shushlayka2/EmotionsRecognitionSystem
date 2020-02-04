@@ -2,8 +2,15 @@
 
 #include <cublas_v2.h>
 
+enum class ActivationType {
+	Softmax,
+	Sigmoid
+};
+
 class FullyConnectedLayer {
 private:
+
+	ActivationType type;
 	int in_size;
 	int out_size;
 	float* inputs_device;
@@ -17,11 +24,13 @@ private:
 
 	void correct();
 	void add_biases(cublasHandle_t& handle);
+	void activate(cublasHandle_t& handle);
+	void activate_sigmoid();
 	void activate_softmax(cublasHandle_t& handle);
 	void m_v_multiplication(float* matrix, float* vector, float* result_vector, cublasHandle_t& handle, cublasOperation_t trans = CUBLAS_OP_T);
 
 public:
-	FullyConnectedLayer(int in_size, int out_size);
+	FullyConnectedLayer(int in_size, int out_size, ActivationType type = ActivationType::Sigmoid);
 	void set_gradients(int correct_result);
 	float* get_gradients();
 	float* forward(float* prev_layer_data);

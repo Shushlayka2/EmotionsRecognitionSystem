@@ -38,8 +38,16 @@ __global__ void cuda_softmax(float* A, float* max, const float log_val, const in
 	int idx = blockIdx.x * blockDim.x + threadIdx.x;
 	if (idx < size)
 	{
-
 		A[idx] = __expf(A[idx] - max[0] - log_val);
+	}
+}
+
+__global__ void cuda_sigmoid(float* outputs, const int size)
+{
+	int idx = blockIdx.x * blockDim.x + threadIdx.x;
+	if (idx < size)
+	{
+		outputs[idx] = 1 / (1 + __expf(-1 * outputs[idx]));
 	}
 }
 
@@ -82,9 +90,10 @@ __global__ void cuda_correct_biases(float* biases, const int out_count)
 	}
 }
 
-FullyConnectedLayer::FullyConnectedLayer(int in_size, int out_size) {
+FullyConnectedLayer::FullyConnectedLayer(int in_size, int out_size, ActivationType type) {
 	this->in_size = in_size;
 	this->out_size = out_size;
+	this->type = type;
 	weights_device = set_normal_random(in_size * out_size, 1, weights_pitch);
 	biases_device = set_repeatable_values(out_size, 0.01f);
 	cudaMalloc((void**)&gradients_device, out_size * sizeof(float));
@@ -131,7 +140,7 @@ float* FullyConnectedLayer::forward(float* prev_layer_data) {
 		printf("%f ", outputs_host[i]);
 	printf("\n");
 
-	activate_softmax(handle);
+	activate(handle);
 
 	//test
 	printf("Outputs after activate:\n");
@@ -210,7 +219,7 @@ void FullyConnectedLayer::correct() {
 	cudaDeviceSynchronize();
 	cudacall(cudaGetLastError());
 
-	//assert
+	//test
 	printf("Corrected Biases:\n");
 	float* biases_host = new float[out_size];
 	cudaMemcpy(biases_host, biases_device, out_size * sizeof(float), cudaMemcpyDeviceToHost);
@@ -228,6 +237,21 @@ void FullyConnectedLayer::m_v_multiplication(float* matrix, float* vector, float
 void FullyConnectedLayer::add_biases(cublasHandle_t& handle) {
 	float alpha = 1.0f;
 	cublascall(cublasSaxpy(handle, out_size, &alpha, biases_device, 1, outputs_device, 1));
+}
+
+void FullyConnectedLayer::activate(cublasHandle_t& handle) {
+	if (type == ActivationType::Softmax)
+		activate_softmax(handle);
+	else
+		activate_sigmoid();
+}
+
+void FullyConnectedLayer::activate_sigmoid() {
+	dim3 threadsPerBlock = BLOCK_SIZE;
+	dim3 blocksPerGrid = out_size / BLOCK_SIZE + (out_size % BLOCK_SIZE == 0 ? 0 : 1);
+	cuda_sigmoid << <blocksPerGrid, threadsPerBlock >> > (outputs_device, out_size);
+	cudaDeviceSynchronize();
+	cudacall(cudaGetLastError());
 }
 
 void FullyConnectedLayer::activate_softmax(cublasHandle_t& handle) {

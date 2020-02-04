@@ -93,13 +93,16 @@ void Network::init_layers() {
 
 	prev_layer_neurons_count *= prev_layer_neurons_count * depth;
 
-	for (int i = 0; i < fully_connected_layers_count; i++)
+	for (int i = 0; i < fully_connected_layers_count - 1; i++)
 	{
 		int next_layer_neurons_count = fully_connected_layers_neurons_count[i];
 		FullyConnectedLayer fullyconnected_layer = FullyConnectedLayer(prev_layer_neurons_count, next_layer_neurons_count);
 		fullyConnectedLayers.push_back(fullyconnected_layer);
 		prev_layer_neurons_count = next_layer_neurons_count;
 	}
+	int next_layer_neurons_count = fully_connected_layers_neurons_count[fully_connected_layers_count - 1];
+	FullyConnectedLayer fullyconnected_layer = FullyConnectedLayer(prev_layer_neurons_count, next_layer_neurons_count, ActivationType::Softmax);
+	fullyConnectedLayers.push_back(fullyconnected_layer);
 }
 
 void Network::set_inputs(Tensor& image_matrix_block) {
