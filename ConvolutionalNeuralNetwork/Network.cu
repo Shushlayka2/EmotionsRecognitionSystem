@@ -5,6 +5,17 @@
 #include "cuda_runtime.h"
 #include "device_launch_parameters.h"
 
+#define BLOCK_SIZE 256
+
+__global__ void cuda_normalize(float* inputs, const int size)
+{
+	int idx = blockIdx.x * blockDim.x + threadIdx.x;
+	if (idx < size)
+	{
+		inputs[idx] /= 255;
+	}
+}
+
 Network::Network(ConfigHandler& configurationHandler) {
 	this->configurationHandler = configurationHandler;
 	this->image_size = configurationHandler.Value("image_size");
@@ -33,13 +44,13 @@ void Network::run() {
 		current_matrix_block.matrixes_size * sizeof(float), current_matrix_block.depth, cudaMemcpyDeviceToDevice);
 
 	//test
-	printf("Fully Connected Forward:\n");
+	/*printf("Fully Connected Forward:\n");
 	printf("Inputs:\n");
 	float* inputs_host = new float[current_matrix_block.matrixes_size * current_matrix_block.depth];
 	cudaMemcpy(inputs_host, current_input_vector, current_matrix_block.matrixes_size * current_matrix_block.depth * sizeof(float), cudaMemcpyDeviceToHost);
 	for (int i = 0; i < current_matrix_block.matrixes_size * current_matrix_block.depth; i++)
 		printf("%f ", inputs_host[i]);
-	printf("\n");
+	printf("\n");*/
 
 	for (int i = 0; i < fully_connected_layers_count; i++)
 	{
@@ -111,6 +122,9 @@ void Network::set_inputs(Tensor& image_matrix_block) {
 	float* data_host = image_matrix_block.data;
 	cudaMallocPitch((void**)&inputs_device.data, &inputs_device.pitch, inputs_device.matrixes_size * sizeof(float), inputs_device.depth);
 	cudaMemcpy2D(inputs_device.data, inputs_device.pitch, data_host, inputs_device.matrixes_size * sizeof(float), inputs_device.matrixes_size * sizeof(float), inputs_device.depth, cudaMemcpyHostToDevice);
+	dim3 threadsPerBlock = BLOCK_SIZE;
+	dim3 blocksPerGrid = inputs_device.matrixes_size / BLOCK_SIZE + (inputs_device.matrixes_size % BLOCK_SIZE == 0 ? 0 : 1);
+	cuda_normalize << <blocksPerGrid, threadsPerBlock >> > (inputs_device.data, inputs_device.matrixes_size);
 }
 
 int Network::get_result() {

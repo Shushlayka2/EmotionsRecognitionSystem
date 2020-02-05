@@ -9,7 +9,7 @@
 
 #define BLOCK_SIZE 256
 #define DOUBLE_BLOCK_SIZE 32
-#define LearningRate 0.001f
+#define LearningRate 0.0005f
 
 texture<float, 1, cudaReadModeElementType> InputsRef;
 texture<float, 1, cudaReadModeElementType> GradientsRef;
@@ -91,6 +91,7 @@ __global__ void cuda_correct_biases(float* biases, const int out_count)
 }
 
 FullyConnectedLayer::FullyConnectedLayer(int in_size, int out_size, ActivationType type) {
+	
 	this->in_size = in_size;
 	this->out_size = out_size;
 	this->type = type;
@@ -104,53 +105,9 @@ FullyConnectedLayer::FullyConnectedLayer(int in_size, int out_size, ActivationTy
 float* FullyConnectedLayer::forward(float* prev_layer_data) {
 
 	inputs_device = prev_layer_data;
-
-	//test
-	printf("Weights:\n");
-	float* weights_host = new float[in_size * out_size];
-	cudaMemcpy(weights_host, weights_device, in_size * out_size * sizeof(float), cudaMemcpyDeviceToHost);
-	for (int i = 0; i < out_size; i++)
-	{
-		for (int j = 0; j < in_size; j++)
-		{
-			printf("%f ", weights_host[i * in_size + j]);
-		}
-		printf("\n");
-	}
-	printf("\n");
-	free(weights_host);
-
 	m_v_multiplication(weights_device, inputs_device, outputs_device, handle);
-
-	//test
-	printf("Outputs after mult:\n");
-	float* outputs_host = new float[out_size];
-	cudaMemcpy(outputs_host, outputs_device, out_size * sizeof(float), cudaMemcpyDeviceToHost);
-	for (int i = 0; i < out_size; i++)
-		printf("%f ", outputs_host[i]);
-	printf("\n");
-
 	add_biases(handle);
-
-	//test
-	printf("Outputs after biases adding:\n");
-	outputs_host = new float[out_size];
-	cudaMemcpy(outputs_host, outputs_device, out_size * sizeof(float), cudaMemcpyDeviceToHost);
-	for (int i = 0; i < out_size; i++)
-		printf("%f ", outputs_host[i]);
-	printf("\n");
-
 	activate(handle);
-
-	//test
-	printf("Outputs after activate:\n");
-	outputs_host = new float[out_size];
-	cudaMemcpy(outputs_host, outputs_device, out_size * sizeof(float), cudaMemcpyDeviceToHost);
-	for (int i = 0; i < out_size; i++)
-		printf("%f ", outputs_host[i]);
-	printf("\n");
-	free(outputs_host);
-
 	return outputs_device;
 }
 
@@ -161,27 +118,12 @@ void FullyConnectedLayer::backward(float* prev_layer_gradients) {
 
 	m_v_multiplication(weights_device, gradients_device, prev_layer_gradients, handle, CUBLAS_OP_N);
 
-	//test
-	printf("Prev Gradients before der:\n");
-	float* gradients_host = new float[in_size];
-	cudaMemcpy(gradients_host, prev_layer_gradients, in_size * sizeof(float), cudaMemcpyDeviceToHost);
-	for (int i = 0; i < in_size; i++)
-		printf("%f ", gradients_host[i]);
-	printf("\n");
-
 	dim3 threadsPerBlock = BLOCK_SIZE;
 	dim3 blocksPerGrid = in_size / BLOCK_SIZE + (in_size % BLOCK_SIZE == 0 ? 0 : 1);
 
 	cuda_gr_to_der_mult << <blocksPerGrid, threadsPerBlock >> > (prev_layer_gradients, in_size);
 	cudaDeviceSynchronize();
 	cudacall(cudaGetLastError());
-
-	printf("Prev Gradients after der:\n");
-	cudaMemcpy(gradients_host, prev_layer_gradients, in_size * sizeof(float), cudaMemcpyDeviceToHost);
-	for (int i = 0; i < in_size; i++)
-		printf("%f ", gradients_host[i]);
-	printf("\n");
-	free(gradients_host);
 
 	correct();
 
@@ -198,48 +140,27 @@ void FullyConnectedLayer::correct() {
 	cudaDeviceSynchronize();
 	cudacall(cudaGetLastError());
 
-	//test
-	printf("Corrected Weights:\n");
-	float* weights_host = new float[in_size * out_size];
-	cudaMemcpy(weights_host, weights_device, in_size * out_size * sizeof(float), cudaMemcpyDeviceToHost);
-	for (int i = 0; i < out_size; i++)
-	{
-		for (int j = 0; j < in_size; j++)
-		{
-			printf("%f ", weights_host[i * in_size + j]);
-		}
-		printf("\n");
-	}
-	printf("\n");
-	free(weights_host);
-
 	threadsPerBlock = BLOCK_SIZE;
 	blocksPerGrid = out_size / BLOCK_SIZE + (out_size % BLOCK_SIZE == 0 ? 0 : 1);
 	cuda_correct_biases << <blocksPerGrid, threadsPerBlock >> > (biases_device, out_size);
 	cudaDeviceSynchronize();
 	cudacall(cudaGetLastError());
-
-	//test
-	printf("Corrected Biases:\n");
-	float* biases_host = new float[out_size];
-	cudaMemcpy(biases_host, biases_device, out_size * sizeof(float), cudaMemcpyDeviceToHost);
-	for (int i = 0; i < out_size; i++)
-		printf("%f ", biases_host[i]);
-	printf("\n");
-	free(biases_host);
 }
 
 void FullyConnectedLayer::m_v_multiplication(float* matrix, float* vector, float* result_vector, cublasHandle_t& handle, cublasOperation_t trans) {
+	
 	float alpha = 1.0f, beta = 0.0f;
 	cublascall(cublasSgemv(handle, trans, in_size, out_size, &alpha, matrix, in_size, vector, 1, &beta, result_vector, 1));
 }
 
 void FullyConnectedLayer::add_biases(cublasHandle_t& handle) {
+	
 	float alpha = 1.0f;
 	cublascall(cublasSaxpy(handle, out_size, &alpha, biases_device, 1, outputs_device, 1));
 }
 
 void FullyConnectedLayer::activate(cublasHandle_t& handle) {
+	
 	if (type == ActivationType::Softmax)
 		activate_softmax(handle);
 	else
@@ -247,6 +168,7 @@ void FullyConnectedLayer::activate(cublasHandle_t& handle) {
 }
 
 void FullyConnectedLayer::activate_sigmoid() {
+	
 	dim3 threadsPerBlock = BLOCK_SIZE;
 	dim3 blocksPerGrid = out_size / BLOCK_SIZE + (out_size % BLOCK_SIZE == 0 ? 0 : 1);
 	cuda_sigmoid << <blocksPerGrid, threadsPerBlock >> > (outputs_device, out_size);
@@ -255,6 +177,7 @@ void FullyConnectedLayer::activate_sigmoid() {
 }
 
 void FullyConnectedLayer::activate_softmax(cublasHandle_t& handle) {
+	
 	float sum = 0.0f;
 	float* max_device;
 	float* helper_vector_device;
@@ -287,19 +210,10 @@ void FullyConnectedLayer::set_gradients(int correct_result) {
 	cuda_set_gradients << <1, 10 >> > (gradients_device, outputs_device, correct_result);
 	cudaDeviceSynchronize();
 	cudacall(cudaGetLastError());
-
-	//test
-	printf("Full Connected Backward:\n");
-	printf("Gradients:\n");
-	float* gradients_host = new float[out_size];
-	cudaMemcpy(gradients_host, gradients_device, out_size * sizeof(float), cudaMemcpyDeviceToHost);
-	for (int i = 0; i < out_size; i++)
-		printf("%f ", gradients_host[i]);
-	printf("\n");
-	free(gradients_host);
 }
 
 float* FullyConnectedLayer::get_gradients() {
+	
 	return gradients_device;
 }
 
@@ -311,6 +225,7 @@ int FullyConnectedLayer::get_result() {
 }
 
 void FullyConnectedLayer::freeMemory() {
+	
 	cudaFree(inputs_device);
 	cudaFree(outputs_device);
 	cudaFree(gradients_device);

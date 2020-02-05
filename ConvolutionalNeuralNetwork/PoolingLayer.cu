@@ -83,6 +83,7 @@ __global__ void cuda_generate_gradients(float* prev_gradients, size_t prev_gr_pi
 }
 
 PoolingLayer::PoolingLayer(const int filter_size, const int gradients_size, const int gradients_depth) {
+	
 	this->filter_size = filter_size;
 	gradients_device = Tensor(gradients_size, gradients_size, gradients_depth);
 	cudaMallocPitch((void**)&gradients_device.data, &gradients_device.pitch, gradients_device.matrixes_size * sizeof(float), gradients_device.depth);
@@ -105,27 +106,6 @@ Tensor& PoolingLayer::forward(Tensor& input_matrixes, Tensor& prev_gradient_matr
 	cudaDeviceSynchronize();
 	cudacall(cudaGetLastError());
 
-	//test
-	printf("Pooling Forward:\n");
-	printf("Outputs:\n");
-	float* outputs_host = new float[outputs_devices.matrixes_size * outputs_devices.depth];
-	cudaMemcpy2D(outputs_host, outputs_devices.matrixes_size * sizeof(float), outputs_devices.data, outputs_devices.pitch,
-		outputs_devices.matrixes_size * sizeof(float), outputs_devices.depth, cudaMemcpyDeviceToHost);
-	for (int i = 0; i < outputs_devices.depth; i++)
-	{
-		for (int j = 0; j < outputs_devices.rows_count; j++)
-		{
-			for (int l = 0; l < outputs_devices.cols_count; l++)
-			{
-				printf("%f ", outputs_host[i * outputs_devices.matrixes_size + j * outputs_devices.cols_count + l]);
-			}
-			printf("\n");
-		}
-		printf("\n");
-	}
-	printf("\n");
-	free(outputs_host);
-
 	cudaUnbindTexture(InputMatrixesRef);
 
 	return outputs_devices;
@@ -145,6 +125,7 @@ void PoolingLayer::backward(Tensor& prev_gradient_matrixes) {
 }
 
 void PoolingLayer::freeMemory() {
+	
 	cudaFree(inputs_device.data);
 	cudaFree(gradients_device.data);
 	cudaFree(outputs_devices.data);

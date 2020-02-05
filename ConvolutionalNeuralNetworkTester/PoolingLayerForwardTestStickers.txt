@@ -1,0 +1,42 @@
+Tensor& PoolingLayer::forward(Tensor& input_matrixes, Tensor& prev_gradient_matrixes) {
+	
+	inputs_device = input_matrixes;
+	unsigned int pooled_feature_map_cols = inputs_device.cols_count / filter_size + (inputs_device.cols_count % filter_size == 0 ? 0 : 1);
+	unsigned int pooled_feature_map_rows = inputs_device.rows_count / filter_size + (inputs_device.rows_count % filter_size == 0 ? 0 : 1);
+
+	outputs_devices = Tensor(pooled_feature_map_rows, pooled_feature_map_cols, inputs_device.depth);
+	cudaMallocPitch((void**)&outputs_devices.data, &outputs_devices.pitch, outputs_devices.matrixes_size * sizeof(float), outputs_devices.depth);
+
+	cudaBindTexture2D(0, InputMatrixesRef, inputs_device.data, InputMatrixesRef.channelDesc, inputs_device.matrixes_size, inputs_device.depth, inputs_device.pitch);
+	
+	dim3 threadsPerBlock = dim3(BLOCK_SIZE, BLOCK_SIZE, 1);
+	dim3 blocksPerGrid = dim3(pooled_feature_map_cols / BLOCK_SIZE + (pooled_feature_map_cols % BLOCK_SIZE == 0 ? 0 : 1), pooled_feature_map_rows / BLOCK_SIZE + (pooled_feature_map_rows % BLOCK_SIZE == 0 ? 0 : 1), inputs_device.depth);
+	cuda_pooling << <blocksPerGrid, threadsPerBlock >> > (outputs_devices.data, prev_gradient_matrixes.data, prev_gradient_matrixes.pitch, input_matrixes.cols_count, input_matrixes.rows_count, outputs_devices.pitch, outputs_devices.cols_count, filter_size);
+	cudaDeviceSynchronize();
+	cudacall(cudaGetLastError());
+
+	//test
+	printf("Pooling Forward:\n");
+	printf("Outputs:\n");
+	float* outputs_host = new float[outputs_devices.matrixes_size * outputs_devices.depth];
+	cudaMemcpy2D(outputs_host, outputs_devices.matrixes_size * sizeof(float), outputs_devices.data, outputs_devices.pitch,
+		outputs_devices.matrixes_size * sizeof(float), outputs_devices.depth, cudaMemcpyDeviceToHost);
+	for (int i = 0; i < outputs_devices.depth; i++)
+	{
+		for (int j = 0; j < outputs_devices.rows_count; j++)
+		{
+			for (int l = 0; l < outputs_devices.cols_count; l++)
+			{
+				printf("%f ", outputs_host[i * outputs_devices.matrixes_size + j * outputs_devices.cols_count + l]);
+			}
+			printf("\n");
+		}
+		printf("\n");
+	}
+	printf("\n");
+	free(outputs_host);
+
+	cudaUnbindTexture(InputMatrixesRef);
+
+	return outputs_devices;
+}
