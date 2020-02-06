@@ -94,11 +94,13 @@
     <ClInclude Include="CustomException.h" />
     <ClInclude Include="DigitImageLoadingService.h" />
     <ClInclude Include="FullyConnectedLayer.h" />
+    <ClInclude Include="Hub.h" />
     <ClInclude Include="ImageHandler.h" />
     <ClInclude Include="Network.h" />
     <ClInclude Include="PoolingLayer.h" />
     <ClInclude Include="Random.h" />
     <ClInclude Include="Tensor.h" />
+    <ClInclude Include="Tester.h" />
     <ClInclude Include="Trainer.h" />
   </ItemGroup>
   <ItemGroup>
@@ -106,8 +108,10 @@
     <ClCompile Include="ConfigHandler.cpp" />
     <ClCompile Include="CustomException.cpp" />
     <ClCompile Include="DigitImageLoadingService.cpp" />
+    <ClCompile Include="Hub.cpp" />
     <ClCompile Include="ImageHandler.cpp" />
     <ClCompile Include="Tensor.cpp" />
+    <ClCompile Include="Tester.cpp" />
     <ClCompile Include="Trainer.cpp" />
   </ItemGroup>
   <ItemGroup>

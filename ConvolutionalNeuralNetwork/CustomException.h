@@ -15,6 +15,5 @@ private:
 	static std::ofstream log_file;
 public:
 	CustomException(const std::string&, const std::string&, const int);
-
 	static void CloseLogFile();
 };

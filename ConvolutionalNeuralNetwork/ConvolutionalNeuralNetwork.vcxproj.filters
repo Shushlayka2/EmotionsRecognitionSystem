@@ -16,7 +16,9 @@
     <CudaCompile Include="FullyConnectedLayer.cu">
       <Filter>Source Files\Models\Layers</Filter>
     </CudaCompile>
-    <CudaCompile Include="Network.cu" />
+    <CudaCompile Include="Network.cu">
+      <Filter>Source Files\Models</Filter>
+    </CudaCompile>
   </ItemGroup>
   <ItemGroup>
     <Filter Include="Header Files">
@@ -48,9 +50,6 @@
     <ClInclude Include="Random.h">
       <Filter>Header Files\Utilities</Filter>
     </ClInclude>
-    <ClInclude Include="Trainer.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="ConfigHandler.h">
       <Filter>Header Files\Utilities</Filter>
     </ClInclude>
@@ -81,6 +80,15 @@
     <ClInclude Include="Tensor.h">
       <Filter>Header Files\Models</Filter>
     </ClInclude>
+    <ClInclude Include="Trainer.h">
+      <Filter>Header Files\Utilities</Filter>
+    </ClInclude>
+    <ClInclude Include="Hub.h">
+      <Filter>Header Files\Models</Filter>
+    </ClInclude>
+    <ClInclude Include="Tester.h">
+      <Filter>Header Files\Utilities</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="ConfigHandler.cpp">
@@ -95,14 +103,20 @@
     <ClCompile Include="Chameleon.cpp">
       <Filter>Source Files\Models</Filter>
     </ClCompile>
-    <ClCompile Include="Trainer.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="DigitImageLoadingService.cpp">
       <Filter>Source Files\Utilities</Filter>
     </ClCompile>
     <ClCompile Include="Tensor.cpp">
       <Filter>Source Files\Models</Filter>
+    </ClCompile>
+    <ClCompile Include="Trainer.cpp">
+      <Filter>Source Files\Utilities</Filter>
+    </ClCompile>
+    <ClCompile Include="Hub.cpp">
+      <Filter>Source Files\Models</Filter>
+    </ClCompile>
+    <ClCompile Include="Tester.cpp">
+      <Filter>Source Files\Utilities</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

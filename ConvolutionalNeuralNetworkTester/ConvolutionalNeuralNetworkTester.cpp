@@ -21,6 +21,7 @@ namespace ConvolutionalNeuralNetworkTester
 	{
 	private:
 		std::fstream file;
+		Hub params_storage;
 		Tensor inputs_device;
 		Tensor custom_device;
 		Tensor gradients_device;
@@ -153,7 +154,7 @@ namespace ConvolutionalNeuralNetworkTester
 			int filter_size = 3, amount_of_filters = 3,
 				gradient_size = custom_device.cols_count - filter_size + 1;
 
-			ConvolutionalLayer conv_layer = ConvolutionalLayer(filter_size, amount_of_filters, gradient_size, filter_size);
+			ConvolutionalLayer conv_layer = ConvolutionalLayer(filter_size, amount_of_filters, gradient_size, filter_size, params_storage);
 
 			custom_device = conv_layer.forward(custom_device);
 			float* output_host;
@@ -178,7 +179,7 @@ namespace ConvolutionalNeuralNetworkTester
 			file << std::endl;
 
 			cudaFree(gradients_device.data);
-			gradients_device = conv_layer.gradients_device;
+			gradients_device = conv_layer.get_gradients();
 
 			free(output_host);
 		}
@@ -233,7 +234,7 @@ namespace ConvolutionalNeuralNetworkTester
 
 		TEST_METHOD(FullyConnectedTesting)
 		{
-			FullyConnectedLayer fullyConnected_layer = FullyConnectedLayer(custom_device.matrixes_size * custom_device.depth, 10);
+			FullyConnectedLayer fullyConnected_layer = FullyConnectedLayer(custom_device.matrixes_size * custom_device.depth, 10, params_storage);
 			float* custom_vector_device = matrix_to_vector(custom_device);
 			custom_vector_device = fullyConnected_layer.forward(custom_vector_device);
 			float* vector_host;

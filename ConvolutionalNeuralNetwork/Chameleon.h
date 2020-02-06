@@ -3,6 +3,8 @@
 #include <string>
 
 class Chameleon {
+private:
+    std::string value;
 public:
     Chameleon() {};
     Chameleon(const int i);
@@ -18,7 +20,4 @@ public:
     operator int() const;
     operator float() const;
     operator std::string() const;
-  
-private:
-    std::string value;
 };

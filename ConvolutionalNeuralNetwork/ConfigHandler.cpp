@@ -20,8 +20,8 @@ std::string trim(std::string const& source, char const* delims = " \t\r\n") {
 ConfigHandler::ConfigHandler() {}
 
 ConfigHandler::ConfigHandler(std::string const& configFile) {
+    
     std::ifstream file(configFile);
-
     std::string line;
     std::string name;
     std::string value;
@@ -50,6 +50,7 @@ Chameleon const& ConfigHandler::Value(std::string const& entry) const {
 }
 
 std::vector<int> ConfigHandler::VectorValue(std::string const& entry) const {
+    
     std::map<std::string, Chameleon>::const_iterator ci = content.find(entry);
 
     if (ci == content.end()) throw_line("does not exist");
@@ -59,6 +60,7 @@ std::vector<int> ConfigHandler::VectorValue(std::string const& entry) const {
 }
 
 std::vector<int> ConfigHandler::split(const std::string& s) const {
+    
     std::vector<int> ret_vec;
     typedef std::string::size_type string_size;
     string_size i = 0;

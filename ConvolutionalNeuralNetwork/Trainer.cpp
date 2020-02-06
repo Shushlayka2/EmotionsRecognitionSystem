@@ -1,34 +1,40 @@
+#include <ctime>
+
 #include "Trainer.h"
-#include "Network.h"
-#include "ConfigHandler.h"
 #include "DigitImageLoadingService.h"
 
-void Trainer::train() {
+void Trainer::train(Network& network, ConfigHandler configurationHandler) {
 	
-	//preproccess
 	int number_of_images;
-	ConfigHandler configHandler("config.txt");
-	Network network(configHandler);
-	training_dataset = DigitImageLoadingService::read_mnist_images("train-images.idx3-ubyte", number_of_images);
-	training_labels = DigitImageLoadingService::read_mnist_labels("train-labels.idx1-ubyte", number_of_images);
+	Tensor* training_dataset = DigitImageLoadingService::read_mnist_images("train-images.idx3-ubyte", number_of_images);
+	int* training_labels = DigitImageLoadingService::read_mnist_labels("train-labels.idx1-ubyte", number_of_images);
 
-	//training
-	for (int i = 0; i < number_of_images; i++)
+	int repetitions_count = configurationHandler.Value("repetitions_count");
+	float epochs_count = configurationHandler.Value("epochs_count");
+	int elapsedTime;
+
+	for (int i = 0; i < epochs_count; i++)
 	{
-		network.set_inputs(training_dataset[i]);
-		network.run();
+		clock_t begin = clock();
+		for (int j = 0; j < number_of_images; j++)
+		{
+			network.set_inputs(training_dataset[j]);
+			network.run();
 
-		for (int j = 0; j < 2; j++)
-			network.correct(training_labels[i]);
+			for (int l = 0; l < repetitions_count; l++)
+				network.correct(training_labels[j]);
+
+			network.free_inputs();
+		}
+		clock_t end = clock();
+		
+		printf("%d epoch:\n\tElapsed time: %f\n", i, double(end - begin) / CLOCKS_PER_SEC);
 	}
 
-	//test
-	for (int i = 0; i < 10; i++)
-	{
-		network.set_inputs(training_dataset[i]);
-		network.run();
-		int result = network.get_result();
-		int correct_result = training_labels[i];
-		printf("Is correct: %d\n", correct_result == result);
-	}
+	save_params(network);
+}
+
+inline void Trainer::save_params(Network& network) {
+
+	network.save_params();
 }

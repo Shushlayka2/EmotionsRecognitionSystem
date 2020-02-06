@@ -1,9 +1,24 @@
 File: C:/Users/Bulat/source/repos/EmotionsRecognitionSystem/ConvolutionalNeuralNetwork/ConvolutionalLayer.cu
-	Line: 199
+	Line: 159
 		Message: invalid argument
 File: C:/Users/Bulat/source/repos/EmotionsRecognitionSystem/ConvolutionalNeuralNetwork/ConvolutionalLayer.cu
-	Line: 199
+	Line: 159
 		Message: invalid argument
 File: C:/Users/Bulat/source/repos/EmotionsRecognitionSystem/ConvolutionalNeuralNetwork/ConvolutionalLayer.cu
-	Line: 199
+	Line: 159
+		Message: invalid argument
+File: C:/Users/Bulat/source/repos/EmotionsRecognitionSystem/ConvolutionalNeuralNetwork/ConvolutionalLayer.cu
+	Line: 158
+		Message: invalid argument
+File: C:/Users/Bulat/source/repos/EmotionsRecognitionSystem/ConvolutionalNeuralNetwork/ConvolutionalLayer.cu
+	Line: 156
+		Message: invalid argument
+File: C:/Users/Bulat/source/repos/EmotionsRecognitionSystem/ConvolutionalNeuralNetwork/PoolingLayer.cu
+	Line: 135
+		Message: invalid argument
+File: C:/Users/Bulat/source/repos/EmotionsRecognitionSystem/ConvolutionalNeuralNetwork/PoolingLayer.cu
+	Line: 133
+		Message: invalid argument
+File: C:/Users/Bulat/source/repos/EmotionsRecognitionSystem/ConvolutionalNeuralNetwork/PoolingLayer.cu
+	Line: 133
 		Message: invalid argument

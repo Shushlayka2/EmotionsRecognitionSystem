@@ -35,7 +35,7 @@ Tensor* DigitImageLoadingService::read_mnist_images(std::string full_path, int& 
             for (int j = 0; j < matrix_size; j++)
             {
                 file.read((char*)&temp, 1);
-                matrixes_dataset[i].data[j] = (float)temp;
+                matrixes_dataset[i].data[j] = ((float)temp) / 255;
             }
         }
         return matrixes_dataset;

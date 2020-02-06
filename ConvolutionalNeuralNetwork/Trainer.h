@@ -1,9 +1,11 @@
 #pragma once
+
 #include "Tensor.h"
+#include "Network.h"
 
 class Trainer {
+private:
+	void save_params(Network& network);
 public:
-	Tensor* training_dataset = nullptr;
-	int* training_labels = nullptr;
-	void train();
+	void train(Network& network, ConfigHandler configurationHandler);
 };

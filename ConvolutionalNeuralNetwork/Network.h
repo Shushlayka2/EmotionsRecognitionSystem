@@ -2,6 +2,7 @@
 
 #include <vector>
 
+#include "Hub.h"
 #include "Tensor.h"
 #include "ConfigHandler.h"
 #include "ConvolutionalLayer.h"
@@ -17,9 +18,11 @@ private:
 	int convolutional_layers_count;
 	int fully_connected_layers_count;
 
+	Hub params_storage;
 	ConfigHandler configurationHandler;
 
-	Tensor inputs_device;
+	Tensor current_tensor;
+	float* current_vector;
 	std::vector<int> fully_connected_layers_neurons_count;
 	std::vector<ConvolutionalLayer> convolutionalLayers;
 	std::vector<PoolingLayer> poolingLayers;
@@ -28,10 +31,15 @@ private:
 	void init_layers();
 
 public:
-	Network(ConfigHandler& configurationHandler);
+	Network(ConfigHandler& configurationHandler, Status status);
 	void run();
-	void correct(int correct_result);
+	void correct(const int correct_result);
 	void set_inputs(Tensor& image_matrix_block);
 	void free_inputs();
+	void free_memory();
 	int get_result();
+	void calc_error(int correct_result);
+	float get_common_error(const int set_size);
+	void set_status(Status status);
+	void save_params();
 };

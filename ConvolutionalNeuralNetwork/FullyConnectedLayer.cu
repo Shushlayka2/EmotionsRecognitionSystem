@@ -1,6 +1,7 @@
 #include <malloc.h>
 #include <iostream>
 
+#include "Hub.h"
 #include "Random.h"
 #include "CustomException.h"
 #include "FullyConnectedLayer.h"
@@ -90,16 +91,27 @@ __global__ void cuda_correct_biases(float* biases, const int out_count)
 	}
 }
 
-FullyConnectedLayer::FullyConnectedLayer(int in_size, int out_size, ActivationType type) {
+FullyConnectedLayer::FullyConnectedLayer(int in_size, int out_size, Hub& params_storage, ActivationType type) {
 	
+	network_error = 0.0f;
 	this->in_size = in_size;
 	this->out_size = out_size;
 	this->type = type;
-	weights_device = set_normal_random(in_size * out_size, 1, weights_pitch);
-	biases_device = set_repeatable_values(out_size, 0.01f);
 	cudaMalloc((void**)&gradients_device, out_size * sizeof(float));
 	cudaMalloc((void**)&outputs_device, out_size * sizeof(float));
 	cublasCreate(&handle);
+
+	if (params_storage.get_status() == Status::Training)
+	{
+		weights_device = set_normal_random(in_size * out_size, 1, weights_pitch);
+		biases_device = set_repeatable_values(out_size, 0.01f);
+	}
+	else
+	{
+		weights_device = params_storage.get_params(in_size * out_size);
+		biases_device = params_storage.get_params(out_size);
+	}
+	
 }
 
 float* FullyConnectedLayer::forward(float* prev_layer_data) {
@@ -122,7 +134,6 @@ void FullyConnectedLayer::backward(float* prev_layer_gradients) {
 	dim3 blocksPerGrid = in_size / BLOCK_SIZE + (in_size % BLOCK_SIZE == 0 ? 0 : 1);
 
 	cuda_gr_to_der_mult << <blocksPerGrid, threadsPerBlock >> > (prev_layer_gradients, in_size);
-	cudaDeviceSynchronize();
 	cudacall(cudaGetLastError());
 
 	correct();
@@ -137,13 +148,11 @@ void FullyConnectedLayer::correct() {
 	dim3 blocksPerGrid = dim3(in_size / DOUBLE_BLOCK_SIZE + (in_size % DOUBLE_BLOCK_SIZE == 0 ? 0 : 1),
 		out_size / DOUBLE_BLOCK_SIZE + (out_size % DOUBLE_BLOCK_SIZE == 0 ? 0 : 1));
 	cuda_correct_weights << <blocksPerGrid, threadsPerBlock >> > (weights_device, in_size, out_size);
-	cudaDeviceSynchronize();
 	cudacall(cudaGetLastError());
 
 	threadsPerBlock = BLOCK_SIZE;
 	blocksPerGrid = out_size / BLOCK_SIZE + (out_size % BLOCK_SIZE == 0 ? 0 : 1);
 	cuda_correct_biases << <blocksPerGrid, threadsPerBlock >> > (biases_device, out_size);
-	cudaDeviceSynchronize();
 	cudacall(cudaGetLastError());
 }
 
@@ -172,7 +181,6 @@ void FullyConnectedLayer::activate_sigmoid() {
 	dim3 threadsPerBlock = BLOCK_SIZE;
 	dim3 blocksPerGrid = out_size / BLOCK_SIZE + (out_size % BLOCK_SIZE == 0 ? 0 : 1);
 	cuda_sigmoid << <blocksPerGrid, threadsPerBlock >> > (outputs_device, out_size);
-	cudaDeviceSynchronize();
 	cudacall(cudaGetLastError());
 }
 
@@ -187,18 +195,15 @@ void FullyConnectedLayer::activate_softmax(cublasHandle_t& handle) {
 	cudaMalloc((void**)&max_device, sizeof(float));
 	cudaMalloc((void**)&helper_vector_device, out_size * sizeof(float));
 	cuda_find_max << <1, 1>> > (outputs_device, max_device, out_size);
-	cudaDeviceSynchronize();
 	cudacall(cudaGetLastError());
 
 	cuda_exp_vector_generate << <blocksPerGrid, threadsPerBlock >> > (outputs_device, helper_vector_device, max_device, out_size);
-	cudaDeviceSynchronize();
 	cudacall(cudaGetLastError());
 
 	cublascall(cublasSasum(handle, out_size, helper_vector_device, 1, &sum));
 
 	sum = log(sum);
 	cuda_softmax << <blocksPerGrid, threadsPerBlock >> > (outputs_device, max_device, sum, out_size);
-	cudaDeviceSynchronize();
 	cudacall(cudaGetLastError());
 	
 	cudaFree(helper_vector_device);
@@ -208,7 +213,6 @@ void FullyConnectedLayer::activate_softmax(cublasHandle_t& handle) {
 void FullyConnectedLayer::set_gradients(int correct_result) {
 
 	cuda_set_gradients << <1, 10 >> > (gradients_device, outputs_device, correct_result);
-	cudaDeviceSynchronize();
 	cudacall(cudaGetLastError());
 }
 
@@ -224,10 +228,31 @@ int FullyConnectedLayer::get_result() {
 	return max_index - 1;
 }
 
+void FullyConnectedLayer::calc_error(int correct_result) {
+
+	float local_error;
+	cudaMemcpy(&local_error, outputs_device + correct_result, sizeof(float), cudaMemcpyDeviceToHost);
+	network_error -= log(local_error);
+}
+
+float FullyConnectedLayer::get_common_error(const int set_size) {
+
+	return network_error / set_size;
+}
+
+void FullyConnectedLayer::save_params(Hub& params_storage) {
+
+	params_storage.set_params(weights_device, in_size * out_size);
+	params_storage.set_params(biases_device, out_size);
+}
+
+void FullyConnectedLayer::freeInputs() {
+
+	cudaFree(inputs_device);
+}
+
 void FullyConnectedLayer::freeMemory() {
 	
-	cudaFree(inputs_device);
-	cudaFree(outputs_device);
 	cudaFree(gradients_device);
 	cudaFree(weights_device);
 	cudaFree(biases_device);
