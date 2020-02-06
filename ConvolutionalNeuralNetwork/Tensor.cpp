@@ -3,6 +3,8 @@
 
 Tensor::Tensor() : data(nullptr), cols_count(0), rows_count(0), matrixes_size(0), depth(0) {}
 
+Tensor::~Tensor() {}
+
 Tensor::Tensor(const unsigned int rows_count, const unsigned int cols_count, const unsigned int depth, size_t pitch) {
 	this->depth = depth;
 	this->pitch = pitch;

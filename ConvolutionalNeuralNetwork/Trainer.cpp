@@ -29,7 +29,12 @@ void Trainer::train(Network& network, ConfigHandler configurationHandler) {
 		printf("%d epoch:\n\tElapsed time: %f\n", i, double(end - begin) / CLOCKS_PER_SEC);
 	}
 
+	for (int i = 0; i < number_of_images; i++)
+		delete training_dataset[i].data;
+
 	save_params(network);
+	delete training_dataset->data;
+	delete training_labels;
 }
 
 inline void Trainer::save_params(Network& network) {

@@ -53,6 +53,7 @@ void Network::correct(const int correct_result) {
 
 	cudaMemcpy2D(cur_gradients_mb.data, cur_gradients_mb.pitch, first_pl_gr_vector_device, cur_gradients_mb.matrixes_size * sizeof(float),
 		cur_gradients_mb.matrixes_size * sizeof(float), cur_gradients_mb.depth, cudaMemcpyDeviceToDevice);
+	cudaFree(first_pl_gr_vector_device);
 
 	for (int i = convolutional_layers_count - 1; i > 0; i--)
 	{

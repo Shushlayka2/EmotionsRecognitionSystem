@@ -9,7 +9,7 @@
 
 #define BLOCK_SIZE 256
 #define DOUBLE_BLOCK_SIZE 32
-#define LearningRate 0.00005f
+#define LearningRate 0.0005f
 
 texture<float, 1, cudaReadModeElementType> InputsRef;
 texture<float, 1, cudaReadModeElementType> GradientsRef;
@@ -248,8 +248,7 @@ void FullyConnectedLayer::save_params(Hub& params_storage) {
 
 void FullyConnectedLayer::freeInputs() {
 
-	if (inputs_device != nullptr)
-		cudaFree(inputs_device);
+	cudaFree(inputs_device);
 	cudacall(cudaGetLastError());
 }
 

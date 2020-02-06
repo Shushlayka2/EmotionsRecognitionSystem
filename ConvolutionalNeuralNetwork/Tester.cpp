@@ -18,6 +18,10 @@ void Tester::test(Network& network) {
 		if (pred_res == real_res)
 			correct_count++;
 		network.calc_error(testing_labels[i]);
+		delete testing_dataset[i].data;
+
 	}
 	printf("\tNetork error: %f\n\tCorrect matches count: %d of %d", network.get_common_error(number_of_images), correct_count, number_of_images);
+	delete testing_dataset->data;
+	delete testing_labels;
 }

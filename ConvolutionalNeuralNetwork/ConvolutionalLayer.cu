@@ -9,7 +9,7 @@
 
 #define BLOCK_SIZE 256
 #define DOUBLE_BLOCK_SIZE 32
-#define LearningRate 0.00005f
+#define LearningRate 0.0005f
 
 texture<float, 2> MatrixesRef;
 texture<float, 2> FiltersRef;
@@ -213,7 +213,6 @@ void ConvolutionalLayer::save_params(Hub& params_storage) {
 void ConvolutionalLayer::freeInputs() {
 	
 	cudaFree(inputs_device.data);
-	cudacall(cudaGetLastError());
 }
 
 void ConvolutionalLayer::freeMemory() {
