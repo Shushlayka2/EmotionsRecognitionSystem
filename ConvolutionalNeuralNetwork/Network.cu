@@ -98,6 +98,8 @@ void Network::init_layers() {
 
 void Network::set_inputs(Tensor& image_matrix_block) {
 
+	convolutionalLayers[0].freeInputs();
+	fullyConnectedLayers[0].freeInputs();
 	current_tensor = image_matrix_block;
 	float* data_host = image_matrix_block.data;
 	cudaMallocPitch((void**)&current_tensor.data, &current_tensor.pitch, current_tensor.matrixes_size * sizeof(float), current_tensor.depth);
@@ -119,21 +121,6 @@ float Network::get_common_error(const int set_size) {
 	return fullyConnectedLayers[fully_connected_layers_count - 1].get_common_error(set_size);
 }
 
-void Network::free_inputs() {
-
-	for (int i = 0; i < convolutional_layers_count; i++)
-	{
-		convolutionalLayers[i].freeInputs();
-		poolingLayers[i].freeInputs();
-	}
-
-	for (int i = 0; i < fully_connected_layers_count; i++)
-		fullyConnectedLayers[i].freeInputs();
-
-	cudaFree(current_tensor.data);
-	cudaFree(current_vector);
-}
-
 void Network::free_memory() {
 
 	for (int i = 0; i < convolutional_layers_count; i++)
@@ -149,6 +136,8 @@ void Network::free_memory() {
 	poolingLayers.clear();
 	fullyConnectedLayers.clear();
 	params_storage.reset();
+	cudaFree(current_tensor.data);
+	cudaFree(current_vector);
 }
 
 void Network::set_status(Status status) {

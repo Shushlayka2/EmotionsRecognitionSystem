@@ -18,7 +18,6 @@ void Tester::test(Network& network) {
 		if (pred_res == real_res)
 			correct_count++;
 		network.calc_error(testing_labels[i]);
-		network.free_inputs();
 	}
 	printf("\tNetork error: %f\n\tCorrect matches count: %d of %d", network.get_common_error(number_of_images), correct_count, number_of_images);
 }

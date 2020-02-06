@@ -9,7 +9,7 @@
 
 #define BLOCK_SIZE 256
 #define DOUBLE_BLOCK_SIZE 32
-#define LearningRate 0.0005f
+#define LearningRate 0.00005f
 
 texture<float, 2> MatrixesRef;
 texture<float, 2> FiltersRef;
@@ -124,6 +124,9 @@ ConvolutionalLayer::ConvolutionalLayer(const int filters_size, const int filters
 	gradients_device = Tensor(outputs_size, outputs_size, outputs_depth);
 	cudaMallocPitch((void**)&gradients_device.data, &gradients_device.pitch, gradients_device.matrixes_size * sizeof(float), gradients_device.depth);
 
+	outputs_devices = Tensor(outputs_size, outputs_size, filters_count);
+	cudaMallocPitch((void**)&outputs_devices.data, &outputs_devices.pitch, outputs_devices.matrixes_size * sizeof(float), outputs_devices.depth);
+
 	if (params_storage.get_status() == Status::Training)
 	{
 		filters_device.data = set_normal_random(filters_size * filters_size, filters_count, filters_device.pitch);
@@ -139,12 +142,6 @@ ConvolutionalLayer::ConvolutionalLayer(const int filters_size, const int filters
 Tensor& ConvolutionalLayer::forward(Tensor& input_matrixes) {
 	
 	inputs_device = input_matrixes;
-	unsigned int feature_map_depth = inputs_device.depth * filters_device.depth;
-	unsigned int feature_map_cols = inputs_device.cols_count - filters_device.cols_count + 1;
-	unsigned int feature_map_rows = inputs_device.rows_count - filters_device.rows_count + 1;
-
-	outputs_devices = Tensor(feature_map_rows, feature_map_cols, feature_map_depth);
-	cudaMallocPitch((void**)&outputs_devices.data, &outputs_devices.pitch, outputs_devices.matrixes_size * sizeof(float), outputs_devices.depth);
 
 	cudaBindTexture2D(0, MatrixesRef, inputs_device.data, MatrixesRef.channelDesc, inputs_device.matrixes_size, inputs_device.depth, inputs_device.pitch);
 	cudaBindTexture2D(0, FiltersRef, filters_device.data, FiltersRef.channelDesc, filters_device.matrixes_size, filters_device.depth, filters_device.pitch);
@@ -214,13 +211,15 @@ void ConvolutionalLayer::save_params(Hub& params_storage) {
 }
 
 void ConvolutionalLayer::freeInputs() {
-
+	
 	cudaFree(inputs_device.data);
+	cudacall(cudaGetLastError());
 }
 
 void ConvolutionalLayer::freeMemory() {
 
 	cudaFree(filters_device.data);
 	cudaFree(gradients_device.data);
+	cudaFree(inputs_device.data);
 	cudaFree(biases_device);
 }

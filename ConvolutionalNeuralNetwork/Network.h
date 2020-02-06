@@ -35,7 +35,6 @@ public:
 	void run();
 	void correct(const int correct_result);
 	void set_inputs(Tensor& image_matrix_block);
-	void free_inputs();
 	void free_memory();
 	int get_result();
 	void calc_error(int correct_result);

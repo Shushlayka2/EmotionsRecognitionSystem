@@ -23,8 +23,6 @@ void Trainer::train(Network& network, ConfigHandler configurationHandler) {
 
 			for (int l = 0; l < repetitions_count; l++)
 				network.correct(training_labels[j]);
-
-			network.free_inputs();
 		}
 		clock_t end = clock();
 		

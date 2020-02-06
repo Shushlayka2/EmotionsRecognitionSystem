@@ -82,26 +82,24 @@ __global__ void cuda_generate_gradients(float* prev_gradients, size_t prev_gr_pi
 	}
 }
 
-PoolingLayer::PoolingLayer(const int filter_size, const int gradients_size, const int gradients_depth) {
+PoolingLayer::PoolingLayer(const int filter_size, const int outputs_size, const int outputs_depth) {
 	
 	this->filter_size = filter_size;
-	gradients_device = Tensor(gradients_size, gradients_size, gradients_depth);
+	gradients_device = Tensor(outputs_size, outputs_size, outputs_depth);
 	cudaMallocPitch((void**)&gradients_device.data, &gradients_device.pitch, gradients_device.matrixes_size * sizeof(float), gradients_device.depth);
+
+	outputs_devices = Tensor(outputs_size, outputs_size, outputs_depth);
+	cudaMallocPitch((void**)&outputs_devices.data, &outputs_devices.pitch, outputs_devices.matrixes_size * sizeof(float), outputs_devices.depth);
 }
 
 Tensor& PoolingLayer::forward(Tensor& input_matrixes, Tensor& prev_gradient_matrixes) {
 	
 	inputs_device = input_matrixes;
-	unsigned int pooled_feature_map_cols = inputs_device.cols_count / filter_size + (inputs_device.cols_count % filter_size == 0 ? 0 : 1);
-	unsigned int pooled_feature_map_rows = inputs_device.rows_count / filter_size + (inputs_device.rows_count % filter_size == 0 ? 0 : 1);
-
-	outputs_devices = Tensor(pooled_feature_map_rows, pooled_feature_map_cols, inputs_device.depth);
-	cudaMallocPitch((void**)&outputs_devices.data, &outputs_devices.pitch, outputs_devices.matrixes_size * sizeof(float), outputs_devices.depth);
 
 	cudaBindTexture2D(0, InputMatrixesRef, inputs_device.data, InputMatrixesRef.channelDesc, inputs_device.matrixes_size, inputs_device.depth, inputs_device.pitch);
 	
 	dim3 threadsPerBlock = dim3(BLOCK_SIZE, BLOCK_SIZE, 1);
-	dim3 blocksPerGrid = dim3(pooled_feature_map_cols / BLOCK_SIZE + (pooled_feature_map_cols % BLOCK_SIZE == 0 ? 0 : 1), pooled_feature_map_rows / BLOCK_SIZE + (pooled_feature_map_rows % BLOCK_SIZE == 0 ? 0 : 1), inputs_device.depth);
+	dim3 blocksPerGrid = dim3(outputs_devices.cols_count / BLOCK_SIZE + (outputs_devices.cols_count % BLOCK_SIZE == 0 ? 0 : 1), outputs_devices.rows_count / BLOCK_SIZE + (outputs_devices.rows_count % BLOCK_SIZE == 0 ? 0 : 1), outputs_devices.depth);
 	cuda_pooling << <blocksPerGrid, threadsPerBlock >> > (outputs_devices.data, prev_gradient_matrixes.data, prev_gradient_matrixes.pitch, input_matrixes.cols_count, input_matrixes.rows_count, outputs_devices.pitch, outputs_devices.cols_count, filter_size);
 	cudacall(cudaGetLastError());
 
@@ -127,12 +125,8 @@ Tensor& PoolingLayer::get_gradients() {
 	return gradients_device;
 }
 
-void PoolingLayer::freeInputs() {
-
-	cudaFree(inputs_device.data);
-}
-
 void PoolingLayer::freeMemory() {
 	
 	cudaFree(gradients_device.data);
+	cudaFree(inputs_device.data);
 }

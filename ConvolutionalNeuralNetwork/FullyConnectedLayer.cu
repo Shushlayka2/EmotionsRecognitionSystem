@@ -1,4 +1,3 @@
-#include <malloc.h>
 #include <iostream>
 
 #include "Hub.h"
@@ -10,7 +9,7 @@
 
 #define BLOCK_SIZE 256
 #define DOUBLE_BLOCK_SIZE 32
-#define LearningRate 0.0005f
+#define LearningRate 0.00005f
 
 texture<float, 1, cudaReadModeElementType> InputsRef;
 texture<float, 1, cudaReadModeElementType> GradientsRef;
@@ -91,7 +90,7 @@ __global__ void cuda_correct_biases(float* biases, const int out_count)
 	}
 }
 
-FullyConnectedLayer::FullyConnectedLayer(int in_size, int out_size, Hub& params_storage, ActivationType type) {
+FullyConnectedLayer::FullyConnectedLayer(int in_size, int out_size, Hub& params_storage, ActivationType type) : inputs_device(nullptr) {
 	
 	network_error = 0.0f;
 	this->in_size = in_size;
@@ -134,6 +133,7 @@ void FullyConnectedLayer::backward(float* prev_layer_gradients) {
 	dim3 blocksPerGrid = in_size / BLOCK_SIZE + (in_size % BLOCK_SIZE == 0 ? 0 : 1);
 
 	cuda_gr_to_der_mult << <blocksPerGrid, threadsPerBlock >> > (prev_layer_gradients, in_size);
+	cudaDeviceSynchronize();
 	cudacall(cudaGetLastError());
 
 	correct();
@@ -248,7 +248,9 @@ void FullyConnectedLayer::save_params(Hub& params_storage) {
 
 void FullyConnectedLayer::freeInputs() {
 
-	cudaFree(inputs_device);
+	if (inputs_device != nullptr)
+		cudaFree(inputs_device);
+	cudacall(cudaGetLastError());
 }
 
 void FullyConnectedLayer::freeMemory() {
@@ -256,5 +258,6 @@ void FullyConnectedLayer::freeMemory() {
 	cudaFree(gradients_device);
 	cudaFree(weights_device);
 	cudaFree(biases_device);
+	cudaFree(inputs_device);
 	cublasDestroy(handle);
 }
