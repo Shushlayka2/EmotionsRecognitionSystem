@@ -199,20 +199,10 @@ void ConvolutionalLayer::correct() {
 	cudaUnbindTexture(OutputsRef);
 }
 
-Tensor& ConvolutionalLayer::get_gradients() {
-
-	return gradients_device;
-}
-
 void ConvolutionalLayer::save_params(Hub& params_storage) {
 
 	params_storage.set_params(filters_device);
 	params_storage.set_params(biases_device, outputs_devices.depth);
-}
-
-void ConvolutionalLayer::freeInputs() {
-	
-	cudaFree(inputs_device.data);
 }
 
 void ConvolutionalLayer::freeMemory() {

@@ -120,11 +120,6 @@ void PoolingLayer::backward(Tensor& prev_gradient_matrixes) {
 	cudaUnbindTexture(InputMatrixesRef);
 }
 
-Tensor& PoolingLayer::get_gradients() {
-
-	return gradients_device;
-}
-
 void PoolingLayer::freeMemory() {
 	
 	cudaFree(gradients_device.data);

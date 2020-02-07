@@ -15,6 +15,8 @@
 
 using namespace Microsoft::VisualStudio::CppUnitTestFramework;
 
+#define ImageSize 28
+
 namespace ConvolutionalNeuralNetworkTester
 {
 	TEST_CLASS(ConvolutionalNeuralNetworkTester)
@@ -26,10 +28,9 @@ namespace ConvolutionalNeuralNetworkTester
 		Tensor custom_device;
 		Tensor gradients_device;
 
-		void host_to_device(Tensor& mb) {
-			float* data_host = mb.data;
-			cudaMallocPitch((void**)&mb.data, &mb.pitch, mb.matrixes_size * sizeof(float), mb.depth);
-			cudaMemcpy2D(mb.data, mb.pitch, data_host, mb.matrixes_size * sizeof(float), mb.matrixes_size * sizeof(float), mb.depth, cudaMemcpyHostToDevice);
+		void host_to_device(float* arr, Tensor& tens) {
+			cudaMallocPitch((void**)&tens.data, &tens.pitch, tens.matrixes_size * sizeof(float), tens.depth);
+			cudaMemcpy2D(tens.data, tens.pitch, arr, tens.matrixes_size * sizeof(float), tens.matrixes_size * sizeof(float), tens.depth, cudaMemcpyHostToDevice);
 		}
 
 		float* matrix_to_vector(Tensor& mb) {
@@ -43,10 +44,10 @@ namespace ConvolutionalNeuralNetworkTester
 
 		Tensor& init_custom_inputs() {
 			Tensor result = Tensor(5, 5, 1);
-			result.data = new float[25];
+			float* data = new float[25];
 			for (int i = 0; i < 25; i++)
 				result.data[i] = i;
-			host_to_device(result);
+			host_to_device(data, result);
 			return result;
 		}
 		
@@ -61,13 +62,13 @@ namespace ConvolutionalNeuralNetworkTester
 		{
 			int number_of_images;
 			file.open("C:\\Users\\Bulat\\source\\repos\\EmotionsRecognitionSystem\\ConvolutionalNeuralNetworkTester\\result.txt", std::ios::out);
-			Tensor* training_dataset = DigitImageLoadingService::read_mnist_images("C:\\Users\\Bulat\\source\\repos\\EmotionsRecognitionSystem\\ConvolutionalNeuralNetwork\\train-images.idx3-ubyte", number_of_images);
-			host_to_device(training_dataset[0]);
-			inputs_device = training_dataset[0];
+			float** training_dataset = DigitImageLoadingService::read_mnist_images("C:\\Users\\Bulat\\source\\repos\\EmotionsRecognitionSystem\\ConvolutionalNeuralNetwork\\train-images.idx3-ubyte", number_of_images);
+			inputs_device.cols_count = ImageSize; inputs_device.rows_count = ImageSize; inputs_device.matrixes_size = ImageSize * ImageSize; inputs_device.depth = 1;
+			host_to_device(training_dataset[0], inputs_device);
 			custom_device = init_custom_inputs();
 			gradients_device = init_gradients();
 			for (int i = 1; i < number_of_images; i++)
-				free(training_dataset[i].data);
+				delete[] training_dataset[i];
 		}
 
 		~ConvolutionalNeuralNetworkTester()
@@ -179,7 +180,7 @@ namespace ConvolutionalNeuralNetworkTester
 			file << std::endl;
 
 			cudaFree(gradients_device.data);
-			gradients_device = conv_layer.get_gradients();
+			gradients_device = conv_layer.gradients_device;
 
 			free(output_host);
 		}

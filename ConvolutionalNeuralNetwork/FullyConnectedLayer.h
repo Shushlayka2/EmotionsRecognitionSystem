@@ -13,9 +13,6 @@ private:
 	ActivationType type;
 	int in_size;
 	int out_size;
-	float* inputs_device;
-	float* outputs_device;
-	float* gradients_device;
 	float* weights_device;
 	float* biases_device;
 	float network_error;
@@ -31,15 +28,17 @@ private:
 	void m_v_multiplication(float* matrix, float* vector, float* result_vector, cublasHandle_t& handle, cublasOperation_t trans = CUBLAS_OP_T);
 
 public:
+	float* inputs_device;
+	float* outputs_device;
+	float* gradients_device;
+
 	FullyConnectedLayer(int in_size, int out_size, Hub& params_storage, ActivationType type = ActivationType::Sigmoid);
 	void set_gradients(int correct_result);
-	float* get_gradients();
 	float* forward(float* prev_layer_data);
 	void backward(float* prev_layer_gradients);
 	int get_result();
 	void calc_error(int correct_result);
 	float get_common_error(const int set_size);
 	void save_params(Hub& params_storage);
-	void freeInputs();
 	void freeMemory();
 };

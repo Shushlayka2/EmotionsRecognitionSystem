@@ -8,7 +8,7 @@ auto reverseInt = [](int i) {
     return ((int)c1 << 24) + ((int)c2 << 16) + ((int)c3 << 8) + c4;
 };
 
-Tensor* DigitImageLoadingService::read_mnist_images(std::string full_path, int& number_of_images) {
+float** DigitImageLoadingService::read_mnist_images(std::string full_path, int& number_of_images) {
 
     std::ifstream file(full_path, std::ios::binary);
 
@@ -27,15 +27,13 @@ Tensor* DigitImageLoadingService::read_mnist_images(std::string full_path, int& 
 
         int matrix_size = n_cols * n_rows;
 
-        Tensor* matrixes_dataset = new Tensor[number_of_images];
+        float** matrixes_dataset = new float*[number_of_images];
         for (int i = 0; i < number_of_images; i++) {
-            matrixes_dataset[i].cols_count = n_cols; matrixes_dataset[i].rows_count = n_rows;
-            matrixes_dataset[i].depth = 1; matrixes_dataset[i].matrixes_size = matrix_size;
-            matrixes_dataset[i].data = new float[matrix_size];
+            matrixes_dataset[i] = new float[matrix_size];
             for (int j = 0; j < matrix_size; j++)
             {
                 file.read((char*)&temp, 1);
-                matrixes_dataset[i].data[j] = ((float)temp) / 255;
+                matrixes_dataset[i][j] = ((float)temp) / 255;
             }
         }
         return matrixes_dataset;

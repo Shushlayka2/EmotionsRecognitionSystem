@@ -6,7 +6,7 @@
 void Trainer::train(Network& network, ConfigHandler configurationHandler) {
 	
 	int number_of_images;
-	Tensor* training_dataset = DigitImageLoadingService::read_mnist_images("train-images.idx3-ubyte", number_of_images);
+	float** training_dataset = DigitImageLoadingService::read_mnist_images("train-images.idx3-ubyte", number_of_images);
 	int* training_labels = DigitImageLoadingService::read_mnist_labels("train-labels.idx1-ubyte", number_of_images);
 
 	int repetitions_count = configurationHandler.Value("repetitions_count");
@@ -30,11 +30,11 @@ void Trainer::train(Network& network, ConfigHandler configurationHandler) {
 	}
 
 	for (int i = 0; i < number_of_images; i++)
-		delete training_dataset[i].data;
+		delete training_dataset[i];
 
 	save_params(network);
-	delete training_dataset->data;
-	delete training_labels;
+	delete[] training_labels;
+	delete[] training_dataset;
 }
 
 inline void Trainer::save_params(Network& network) {

@@ -133,7 +133,6 @@ void FullyConnectedLayer::backward(float* prev_layer_gradients) {
 	dim3 blocksPerGrid = in_size / BLOCK_SIZE + (in_size % BLOCK_SIZE == 0 ? 0 : 1);
 
 	cuda_gr_to_der_mult << <blocksPerGrid, threadsPerBlock >> > (prev_layer_gradients, in_size);
-	cudaDeviceSynchronize();
 	cudacall(cudaGetLastError());
 
 	correct();
@@ -216,11 +215,6 @@ void FullyConnectedLayer::set_gradients(int correct_result) {
 	cudacall(cudaGetLastError());
 }
 
-float* FullyConnectedLayer::get_gradients() {
-	
-	return gradients_device;
-}
-
 int FullyConnectedLayer::get_result() {
 	
 	int max_index;
@@ -244,12 +238,6 @@ void FullyConnectedLayer::save_params(Hub& params_storage) {
 
 	params_storage.set_params(weights_device, in_size * out_size);
 	params_storage.set_params(biases_device, out_size);
-}
-
-void FullyConnectedLayer::freeInputs() {
-
-	cudaFree(inputs_device);
-	cudacall(cudaGetLastError());
 }
 
 void FullyConnectedLayer::freeMemory() {

@@ -25,10 +25,10 @@ void Network::run() {
 	for (int i = 0; i < convolutional_layers_count; i++)
 	{
 		current_tensor = convolutionalLayers[i].forward(current_tensor);
-		current_tensor = poolingLayers[i].forward(current_tensor, convolutionalLayers[i].get_gradients());
+		current_tensor = poolingLayers[i].forward(current_tensor, convolutionalLayers[i].gradients_device);
 	}
 
-	cudaMalloc((void**)&current_vector, current_tensor.matrixes_size * current_tensor.depth * sizeof(float));
+	current_vector = fullyConnectedLayers[0].inputs_device;
 	cudaMemcpy2D(current_vector, current_tensor.matrixes_size * sizeof(float), current_tensor.data, current_tensor.pitch,
 		current_tensor.matrixes_size * sizeof(float), current_tensor.depth, cudaMemcpyDeviceToDevice);
 
@@ -43,25 +43,21 @@ void Network::correct(const int correct_result) {
 	fullyConnectedLayers[fully_connected_layers_count - 1].set_gradients(correct_result);
 	for (int i = fully_connected_layers_count - 1; i > 0; i--)
 	{
-		fullyConnectedLayers[i].backward(fullyConnectedLayers[i - 1].get_gradients());
+		fullyConnectedLayers[i].backward(fullyConnectedLayers[i - 1].gradients_device);
 	}
 
-	Tensor cur_gradients_mb = poolingLayers[convolutional_layers_count - 1].get_gradients();
-	float* first_pl_gr_vector_device;
-	cudaMalloc((void**)&first_pl_gr_vector_device, cur_gradients_mb.matrixes_size * cur_gradients_mb.depth * sizeof(float));
-	fullyConnectedLayers[0].backward(first_pl_gr_vector_device);
-
-	cudaMemcpy2D(cur_gradients_mb.data, cur_gradients_mb.pitch, first_pl_gr_vector_device, cur_gradients_mb.matrixes_size * sizeof(float),
+	fullyConnectedLayers[0].backward(intermediate_vector);
+	Tensor cur_gradients_mb = poolingLayers[convolutional_layers_count - 1].gradients_device;
+	cudaMemcpy2D(cur_gradients_mb.data, cur_gradients_mb.pitch, intermediate_vector, cur_gradients_mb.matrixes_size * sizeof(float),
 		cur_gradients_mb.matrixes_size * sizeof(float), cur_gradients_mb.depth, cudaMemcpyDeviceToDevice);
-	cudaFree(first_pl_gr_vector_device);
 
 	for (int i = convolutional_layers_count - 1; i > 0; i--)
 	{
-		poolingLayers[i].backward(convolutionalLayers[i].get_gradients());
+		poolingLayers[i].backward(convolutionalLayers[i].gradients_device);
 		convolutionalLayers[i].correct();
-		convolutionalLayers[i].backward(poolingLayers[i - 1].get_gradients());
+		convolutionalLayers[i].backward(poolingLayers[i - 1].gradients_device);
 	}
-	poolingLayers[0].backward(convolutionalLayers[0].get_gradients());
+	poolingLayers[0].backward(convolutionalLayers[0].gradients_device);
 	convolutionalLayers[0].correct();
 }
 
@@ -84,6 +80,13 @@ void Network::init_layers() {
 	}
 
 	prev_layer_neurons_count *= prev_layer_neurons_count * depth;
+	int first_fc_inputs_count = prev_layer_neurons_count;
+	cudaMalloc((void**)&intermediate_vector, prev_layer_neurons_count * sizeof(float));
+
+	Tensor& first_inputs = convolutionalLayers[0].inputs_device;
+	first_inputs.cols_count = image_size; first_inputs.rows_count = image_size;
+	first_inputs.matrixes_size = image_size * image_size; first_inputs.depth = 1;
+	cudaMallocPitch((void**)&first_inputs.data, &first_inputs.pitch, first_inputs.matrixes_size * sizeof(float), first_inputs.depth);
 
 	for (int i = 0; i < fully_connected_layers_count - 1; i++)
 	{
@@ -95,16 +98,14 @@ void Network::init_layers() {
 	int next_layer_neurons_count = fully_connected_layers_neurons_count[fully_connected_layers_count - 1];
 	FullyConnectedLayer fullyconnected_layer = FullyConnectedLayer(prev_layer_neurons_count, next_layer_neurons_count, params_storage, ActivationType::Softmax);
 	fullyConnectedLayers.push_back(fullyconnected_layer);
+
+	cudaMalloc((void**)&fullyConnectedLayers[0].inputs_device, first_fc_inputs_count * sizeof(float));
 }
 
-void Network::set_inputs(Tensor& image_matrix_block) {
+void Network::set_inputs(float* image_matrix) {
 
-	convolutionalLayers[0].freeInputs();
-	fullyConnectedLayers[0].freeInputs();
-	current_tensor = image_matrix_block;
-	float* data_host = image_matrix_block.data;
-	cudaMallocPitch((void**)&current_tensor.data, &current_tensor.pitch, current_tensor.matrixes_size * sizeof(float), current_tensor.depth);
-	cudaMemcpy2D(current_tensor.data, current_tensor.pitch, data_host, current_tensor.matrixes_size * sizeof(float), current_tensor.matrixes_size * sizeof(float), current_tensor.depth, cudaMemcpyHostToDevice);
+	current_tensor = convolutionalLayers[0].inputs_device;
+	cudaMemcpy2D(current_tensor.data, current_tensor.pitch, image_matrix, current_tensor.matrixes_size * sizeof(float), current_tensor.matrixes_size * sizeof(float), current_tensor.depth, cudaMemcpyHostToDevice);
 }
 
 int Network::get_result() {
@@ -138,6 +139,7 @@ void Network::free_memory() {
 	fullyConnectedLayers.clear();
 	params_storage.reset();
 	cudaFree(current_tensor.data);
+	cudaFree(intermediate_vector);
 	cudaFree(current_vector);
 }
 
