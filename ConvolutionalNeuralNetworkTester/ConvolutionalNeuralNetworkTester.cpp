@@ -46,7 +46,7 @@ namespace ConvolutionalNeuralNetworkTester
 			Tensor result = Tensor(5, 5, 1);
 			float* data = new float[25];
 			for (int i = 0; i < 25; i++)
-				result.data[i] = i;
+				data[i] = i;
 			host_to_device(data, result);
 			return result;
 		}
@@ -67,8 +67,6 @@ namespace ConvolutionalNeuralNetworkTester
 			host_to_device(training_dataset[0], inputs_device);
 			custom_device = init_custom_inputs();
 			gradients_device = init_gradients();
-			for (int i = 1; i < number_of_images; i++)
-				delete[] training_dataset[i];
 		}
 
 		~ConvolutionalNeuralNetworkTester()
