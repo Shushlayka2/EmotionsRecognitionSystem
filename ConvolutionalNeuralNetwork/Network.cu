@@ -7,15 +7,13 @@
 Network::Network(ConfigHandler& configurationHandler, Status status) {
 	
 	params_storage.set_status(status);
-	if (status == Status::Training)
-		params_storage.clear_params();
 	this->configurationHandler = configurationHandler;
 	image_size = configurationHandler.Value("image_size");
 	filter_size = configurationHandler.Value("filter_size");
-	amount_of_filters = configurationHandler.Value("amount_of_filters");
 	pooling_filters_size = configurationHandler.Value("pooling_filters_size");
 	convolutional_layers_count = configurationHandler.Value("convolution_layers_count");
 	fully_connected_layers_count = configurationHandler.Value("fully_connected_layers_count");
+	convolutional_layers_filters_count = configurationHandler.VectorValue("convolutional_layers_filters_count");
 	fully_connected_layers_neurons_count = configurationHandler.VectorValue("fully_connected_layers_neurons_count");
 	init_layers();
 }
@@ -64,24 +62,26 @@ void Network::correct(const int correct_result) {
 void Network::init_layers() {
 
 	int depth = 1;
-	int prev_layer_neurons_count = image_size;
+	int current_size = image_size;
 	for (int i = 0; i < convolutional_layers_count; i++)
 	{
-		depth *= amount_of_filters;
+		int filters_count = convolutional_layers_filters_count[i];
 
-		prev_layer_neurons_count = prev_layer_neurons_count - filter_size + 1;
-		ConvolutionalLayer conv_layer = ConvolutionalLayer(filter_size, amount_of_filters, prev_layer_neurons_count, depth, params_storage);
+		current_size = current_size - filter_size + 1;
+		ConvolutionalLayer conv_layer = ConvolutionalLayer(filter_size, filters_count, depth, current_size, params_storage);
 
-		prev_layer_neurons_count = prev_layer_neurons_count / 2 + (prev_layer_neurons_count % 2 == 0 ? 0 : 1);
-		PoolingLayer pooling_layer = PoolingLayer(pooling_filters_size, prev_layer_neurons_count, depth);
+		depth = filters_count;
+
+		current_size = current_size / 2 + (current_size % 2 == 0 ? 0 : 1);
+		PoolingLayer pooling_layer = PoolingLayer(pooling_filters_size, current_size, depth);
 		
 		convolutionalLayers.push_back(conv_layer);
 		poolingLayers.push_back(pooling_layer);
 	}
 
-	prev_layer_neurons_count *= prev_layer_neurons_count * depth;
-	int first_fc_inputs_count = prev_layer_neurons_count;
-	cudaMalloc((void**)&intermediate_vector, prev_layer_neurons_count * sizeof(float));
+	current_size *= current_size * depth;
+	int first_fc_inputs_count = current_size;
+	cudaMalloc((void**)&intermediate_vector, current_size * sizeof(float));
 
 	Tensor& first_inputs = convolutionalLayers[0].inputs_device;
 	first_inputs.cols_count = image_size; first_inputs.rows_count = image_size;
@@ -91,21 +91,25 @@ void Network::init_layers() {
 	for (int i = 0; i < fully_connected_layers_count - 1; i++)
 	{
 		int next_layer_neurons_count = fully_connected_layers_neurons_count[i];
-		FullyConnectedLayer fullyconnected_layer = FullyConnectedLayer(prev_layer_neurons_count, next_layer_neurons_count, params_storage);
+		FullyConnectedLayer fullyconnected_layer = FullyConnectedLayer(current_size, next_layer_neurons_count, params_storage, ActivationType::Sigmoid);
 		fullyConnectedLayers.push_back(fullyconnected_layer);
-		prev_layer_neurons_count = next_layer_neurons_count;
+		current_size = next_layer_neurons_count;
 	}
 	int next_layer_neurons_count = fully_connected_layers_neurons_count[fully_connected_layers_count - 1];
-	FullyConnectedLayer fullyconnected_layer = FullyConnectedLayer(prev_layer_neurons_count, next_layer_neurons_count, params_storage, ActivationType::Softmax);
+	FullyConnectedLayer fullyconnected_layer = FullyConnectedLayer(current_size, next_layer_neurons_count, params_storage, ActivationType::Softmax);
 	fullyConnectedLayers.push_back(fullyconnected_layer);
 
 	cudaMalloc((void**)&fullyConnectedLayers[0].inputs_device, first_fc_inputs_count * sizeof(float));
 }
 
-void Network::set_inputs(float* image_matrix) {
+void Network::set_total_inputs(float* image_matrix, const int number_of_images) {
 
-	current_tensor = convolutionalLayers[0].inputs_device;
-	cudaMemcpy2D(current_tensor.data, current_tensor.pitch, image_matrix, current_tensor.matrixes_size * sizeof(float), current_tensor.matrixes_size * sizeof(float), current_tensor.depth, cudaMemcpyHostToDevice);
+	cudaMemcpy2D(total_inputs, current_tensor.pitch, image_matrix, current_tensor.matrixes_size * sizeof(float), current_tensor.matrixes_size * sizeof(float), number_of_images, cudaMemcpyHostToDevice);
+}
+
+void Network::set_inputs(const int image_num) {
+
+	current_tensor.data = total_inputs + image_num * ;
 }
 
 int Network::get_result() {

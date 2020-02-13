@@ -1,9 +1,9 @@
 image_size = 28
 convolution_layers_count = 1
-amount_of_filters = 3
 filter_size = 3
 pooling_filters_size = 2
 fully_connected_layers_count = 3
+convolutional_layers_filters_count = 3
 fully_connected_layers_neurons_count = 120 48 10
 epochs_count = 1
-repetitions_count = 2
+repetitions_count = 1

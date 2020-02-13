@@ -12,7 +12,7 @@ public:
 	Tensor outputs_devices;
 	Tensor gradients_device;
 
-	ConvolutionalLayer(const int filters_size, const int filters_count, const int outputs_size, const int outputs_depth, Hub& params_storage);
+	ConvolutionalLayer(const int filters_size, const int filters_count, const int inputs_depth, const int outputs_size, Hub& params_storage);
 	Tensor& forward(Tensor& input_matrixes);
 	void backward(Tensor& prev_gradient_matrixes);
 	void correct();

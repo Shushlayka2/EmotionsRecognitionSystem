@@ -3,7 +3,7 @@
 #include "device_launch_parameters.h"
 #include <string>
 
-Hub::Hub() : inp_data_stream("params.txt", std::fstream::app), out_data_stream("params.txt", std::fstream::app), status(Status::Training) { }
+Hub::Hub() : inp_data_stream("params.txt", std::fstream::app), out_data_stream("params.txt", std::fstream::app), status(Status::Undefined) { }
 
 Hub::~Hub() {
 
@@ -14,6 +14,8 @@ Hub::~Hub() {
 void Hub::set_status(Status status) {
 
     this->status = status;
+    if (status == Status::Training)
+        this->clear_params();
 }
 
 Status Hub::get_status() {
@@ -55,7 +57,6 @@ void Hub::set_params(Tensor& tensor) {
     for (int i = 0; i < arr_size; i++)
         out_data_stream << buffer[i] << " ";
     out_data_stream << std::endl;
-    
     delete[] buffer;
 }
 

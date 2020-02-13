@@ -13,14 +13,14 @@ void Trainer::train(Network& network, ConfigHandler configurationHandler) {
 	float epochs_count = configurationHandler.Value("epochs_count");
 	int elapsedTime;
 
+	network.set_total_inputs(training_dataset);
 	for (int i = 0; i < epochs_count; i++)
 	{
 		clock_t begin = clock();
 		for (int j = 0; j < number_of_images; j++)
-		{
-			network.set_inputs(training_dataset[j]);
+		{	
+			network.set_inputs(j);
 			network.run();
-
 			for (int l = 0; l < repetitions_count; l++)
 				network.correct(training_labels[j]);
 		}
@@ -29,12 +29,9 @@ void Trainer::train(Network& network, ConfigHandler configurationHandler) {
 		printf("%d epoch:\n\tElapsed time: %f\n", i, double(end - begin) / CLOCKS_PER_SEC);
 	}
 
-	for (int i = 0; i < number_of_images; i++)
-		delete training_dataset[i];
-
 	save_params(network);
+ 	delete[] training_dataset;
 	delete[] training_labels;
-	delete[] training_dataset;
 }
 
 inline void Trainer::save_params(Network& network) {

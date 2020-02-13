@@ -28,25 +28,19 @@ __global__ void cuda_pooling(float* result, float* prev_gradients, size_t gr_pit
 
 		float* prev_gradients_start = (float*)((char*)prev_gradients + block_z * gr_pitch);
 
-		float max_val = 0.0f;
+		float max_val = _I32_MIN;
+		int max_i, max_j;
 		for (int i = filter_upper_position; i <= filter_bottom_position; i += cols)
 		{
 			for (int j = 0; j <= filter_right_border; j++)
 			{
 				float element = tex2D(InputMatrixesRef, i + j, block_z);
-				max_val = __max(element, max_val);
-				prev_gradients_start[i + j] = max_val;
+				(element > max_val) ? (max_val = element, max_i = i, max_j = j) : (max_val);
+				prev_gradients_start[i + j] = 0;
 			}
 		}
 
-		for (int i = filter_upper_position; i <= filter_bottom_position; i += cols)
-		{
-			for (int j = 0; j <= filter_right_border; j++)
-			{
-				prev_gradients_start[i + j] = prev_gradients_start[i + j] == max_val;
-			}
-		}
-
+		prev_gradients_start[max_i + max_j] = 1.0f;
 		float* feature_map_matrix_start = (float*)((char*)result + block_z * fm_pitch);
 		int feature_map_position = block_y * feature_map_cols + block_x;
 
