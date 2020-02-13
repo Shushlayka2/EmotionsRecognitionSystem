@@ -102,14 +102,12 @@ void Network::init_layers() {
 	cudaMalloc((void**)&fullyConnectedLayers[0].inputs_device, first_fc_inputs_count * sizeof(float));
 }
 
-void Network::set_total_inputs(float* image_matrix, const int number_of_images) {
+void Network::set_inputs(float* image_matrix) {
 
-	cudaMemcpy2D(total_inputs, current_tensor.pitch, image_matrix, current_tensor.matrixes_size * sizeof(float), current_tensor.matrixes_size * sizeof(float), number_of_images, cudaMemcpyHostToDevice);
-}
+	current_tensor = convolutionalLayers[0].inputs_device;
+	cudaMemcpy2D(current_tensor.data, current_tensor.pitch, image_matrix, current_tensor.matrixes_size * sizeof(float), current_tensor.matrixes_size * sizeof(float), current_tensor.depth, cudaMemcpyHostToDevice);
 
-void Network::set_inputs(const int image_num) {
 
-	current_tensor.data = total_inputs + image_num * ;
 }
 
 int Network::get_result() {

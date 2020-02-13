@@ -13,13 +13,12 @@ void Trainer::train(Network& network, ConfigHandler configurationHandler) {
 	float epochs_count = configurationHandler.Value("epochs_count");
 	int elapsedTime;
 
-	network.set_total_inputs(training_dataset);
 	for (int i = 0; i < epochs_count; i++)
 	{
 		clock_t begin = clock();
 		for (int j = 0; j < number_of_images; j++)
 		{	
-			network.set_inputs(j);
+			network.set_inputs(training_dataset[j]);
 			network.run();
 			for (int l = 0; l < repetitions_count; l++)
 				network.correct(training_labels[j]);

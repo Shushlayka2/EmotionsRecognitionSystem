@@ -23,7 +23,7 @@ private:
 	Tensor current_tensor;
 	float* current_vector;
 	float* intermediate_vector;
-	float* total_inputs;
+
 	std::vector<int> convolutional_layers_filters_count;
 	std::vector<int> fully_connected_layers_neurons_count;
 	std::vector<ConvolutionalLayer> convolutionalLayers;
@@ -36,8 +36,7 @@ public:
 	Network(ConfigHandler& configurationHandler, Status status);
 	void run();
 	void correct(const int correct_result);
-	void set_total_inputs(float* image_matrix, const int number_of_images);
-	void set_inputs(const int image_num);
+	void set_inputs(float* image_matrix);
 	void free_memory();
 	int get_result();
 	void calc_error(int correct_result);
