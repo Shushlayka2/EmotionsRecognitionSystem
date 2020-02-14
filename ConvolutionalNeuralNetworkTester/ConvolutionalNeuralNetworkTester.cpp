@@ -12,10 +12,12 @@
 #include "ConvolutionalLayer.h"
 #include "FullyConnectedLayer.h"
 #include "DigitImageLoadingService.h"
+#include <ctime>
 
 using namespace Microsoft::VisualStudio::CppUnitTestFramework;
 
 #define ImageSize 28
+#define IMAGE_PITCH_OFFSET 896
 
 namespace ConvolutionalNeuralNetworkTester
 {
@@ -27,11 +29,7 @@ namespace ConvolutionalNeuralNetworkTester
 		Tensor inputs_device;
 		Tensor custom_device;
 		Tensor gradients_device;
-
-		void host_to_device(float* arr, Tensor& tens) {
-			cudaMallocPitch((void**)&tens.data, &tens.pitch, tens.matrixes_size * sizeof(float), tens.depth);
-			cudaMemcpy2D(tens.data, tens.pitch, arr, tens.matrixes_size * sizeof(float), tens.matrixes_size * sizeof(float), tens.depth, cudaMemcpyHostToDevice);
-		}
+		float* total_inputs;
 
 		float* matrix_to_vector(Tensor& mb) {
 
@@ -47,7 +45,8 @@ namespace ConvolutionalNeuralNetworkTester
 			float* data = new float[25];
 			for (int i = 0; i < 25; i++)
 				data[i] = i;
-			host_to_device(data, result);
+			cudaMallocPitch((void**)&result.data, &result.pitch, result.matrixes_size * sizeof(float), result.depth);
+			cudaMemcpy2D(result.data, result.pitch, data, result.matrixes_size * sizeof(float), result.matrixes_size * sizeof(float), result.depth, cudaMemcpyHostToDevice);
 			return result;
 		}
 		
@@ -62,9 +61,13 @@ namespace ConvolutionalNeuralNetworkTester
 		{
 			int number_of_images;
 			file.open("C:\\Users\\Bulat\\source\\repos\\EmotionsRecognitionSystem\\ConvolutionalNeuralNetworkTester\\result.txt", std::ios::out);
-			float** training_dataset = DigitImageLoadingService::read_mnist_images("C:\\Users\\Bulat\\source\\repos\\EmotionsRecognitionSystem\\ConvolutionalNeuralNetwork\\train-images.idx3-ubyte", number_of_images);
+			float* training_dataset = DigitImageLoadingService::read_mnist_images("C:\\Users\\Bulat\\source\\repos\\EmotionsRecognitionSystem\\ConvolutionalNeuralNetwork\\train-images.idx3-ubyte", number_of_images);
 			inputs_device.cols_count = ImageSize; inputs_device.rows_count = ImageSize; inputs_device.matrixes_size = ImageSize * ImageSize; inputs_device.depth = 1;
-			host_to_device(training_dataset[0], inputs_device);
+			cudaMallocPitch((void**)&total_inputs, &inputs_device.pitch, inputs_device.matrixes_size * sizeof(float), number_of_images);
+			cudaMemcpy2D(total_inputs, inputs_device.pitch, training_dataset, inputs_device.matrixes_size * sizeof(float), inputs_device.matrixes_size * sizeof(float), number_of_images, cudaMemcpyHostToDevice);
+
+			cudaMallocPitch((void**)&inputs_device.data, &inputs_device.pitch, inputs_device.matrixes_size * sizeof(float), 1);
+			inputs_device.data = total_inputs + 0 * IMAGE_PITCH_OFFSET;
 			custom_device = init_custom_inputs();
 			gradients_device = init_gradients();
 			params_storage.set_status(Status::Training);
@@ -76,6 +79,7 @@ namespace ConvolutionalNeuralNetworkTester
 			cudaFree(inputs_device.data);
 			cudaFree(custom_device.data);
 			cudaFree(gradients_device.data);
+			cudaFree(total_inputs);
 		}
 
 		TEST_METHOD(InputsTesting)
@@ -251,12 +255,19 @@ namespace ConvolutionalNeuralNetworkTester
 
 		TEST_METHOD(ForwardTesting)
 		{
+			int elapsed_time;
+			clock_t begin = clock();
 			custom_device = inputs_device;
 			ConvolveTesting();
 			PoolingTesting();
 			InputsToVectorTesting();
 			FullyConnectedTesting();
 			custom_device = init_custom_inputs();
+			clock_t end = clock();
+			elapsed_time = end - begin;
+			char buffer[100];
+			sprintf(buffer, "%d ", elapsed_time);
+			file << elapsed_time;
 		}
 	};
 }

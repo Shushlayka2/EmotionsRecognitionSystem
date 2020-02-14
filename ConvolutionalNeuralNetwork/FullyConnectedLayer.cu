@@ -6,6 +6,7 @@
 #include "FullyConnectedLayer.h"
 #include "cuda_runtime.h"
 #include "device_launch_parameters.h"
+#include <ctime>
 
 #define BLOCK_SIZE 256
 #define DOUBLE_BLOCK_SIZE 32
@@ -185,6 +186,8 @@ void FullyConnectedLayer::activate_sigmoid() {
 
 void FullyConnectedLayer::activate_softmax(cublasHandle_t& handle) {
 	
+	clock_t begin, end;
+	begin = clock();
 	float sum = 0.0f;
 	float* max_device;
 	float* helper_vector_device;
@@ -207,6 +210,8 @@ void FullyConnectedLayer::activate_softmax(cublasHandle_t& handle) {
 	
 	cudaFree(helper_vector_device);
 	cudaFree(max_device);
+	end = clock();
+	printf("1 Elapsed time: %d\n", end - begin);
 }
 
 void FullyConnectedLayer::set_gradients(int correct_result) {

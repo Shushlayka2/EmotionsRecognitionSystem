@@ -201,7 +201,6 @@ void ConvolutionalLayer::correct() {
 	dim3 blocksPerGrid = dim3(filters_device.cols_count, filters_device.rows_count, filters_device.depth);
 
 	cuda_correct_filters << <blocksPerGrid, threadsPerBlock, MAX_ELEMENTS_COUNT * sizeof(float) >> > (filters_device.data, filters_device.cols_count, filters_device.pitch, gradients_device.cols_count, gradients_device.rows_count, gradients_device.depth, inputs_device.cols_count, inputs_device.depth);
-	cudaDeviceSynchronize();
 	cudacall(cudaGetLastError())
 
 	threadsPerBlock = BLOCK_SIZE;

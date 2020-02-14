@@ -13,7 +13,7 @@ int getVal(const unsigned char *buffer, int pos) {
     return (int)((buffer[pos] << 24) + (buffer[pos + 1] << 16) + (buffer[pos + 2] << 8) + buffer[pos + 3]);
 }
 
-float** DigitImageLoadingService::read_mnist_images(char* full_path, int& number_of_images) {
+float* DigitImageLoadingService::read_mnist_images(char* full_path, int& number_of_images) {
 
     FILE* file;
     long length;
@@ -31,15 +31,13 @@ float** DigitImageLoadingService::read_mnist_images(char* full_path, int& number
     if (magic_number != 2051) throw std::runtime_error("Invalid MNIST image file!");
     number_of_images = getVal(bufferImages, BEGIN_OF_SIZE);
 
-    float** matrixes_dataset = new float*[number_of_images];
-    *matrixes_dataset = new float[number_of_images * IMAGE_SIZE];
-    for (int i = 1; i < number_of_images; i++) matrixes_dataset[i] = matrixes_dataset[i - 1] + IMAGE_SIZE;
+    float *matrixes_dataset = new float[number_of_images * IMAGE_SIZE];
     for (int i = 0; i < number_of_images; i++) {
         for (int j = 0; j < IMAGE_SIZE; j++) {
-            matrixes_dataset[i][j] = ((float)bufferImages[BEGIN_OF_IMAGES + i * IMAGE_SIZE + j]) / 255;
+            matrixes_dataset[i * IMAGE_SIZE + j] = ((float)bufferImages[BEGIN_OF_IMAGES + i * IMAGE_SIZE + j]) / 255;
         }
     }
-    free(bufferImages);
+
     return matrixes_dataset;
 }
 
