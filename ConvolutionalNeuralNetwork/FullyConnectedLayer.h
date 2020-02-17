@@ -17,6 +17,9 @@ private:
 	float* biases_device;
 	float network_error;
 
+	float* sum;
+	float* max_device;
+
 	size_t weights_pitch;
 	cublasHandle_t handle;
 

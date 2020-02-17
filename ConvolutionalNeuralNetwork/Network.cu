@@ -3,7 +3,6 @@
 #include "Network.h"
 #include "cuda_runtime.h"
 #include "device_launch_parameters.h"
-#include <ctime>
 
 #define IMAGE_PITCH_OFFSET 896
 
@@ -23,30 +22,20 @@ Network::Network(ConfigHandler& configurationHandler, Status status) {
 
 void Network::run() {
 
-	//clock_t begin, end;
-	//begin= clock();
 	for (int i = 0; i < convolutional_layers_count; i++)
 	{
 		current_tensor = convolutionalLayers[i].forward(current_tensor);
 		current_tensor = poolingLayers[i].forward(current_tensor, convolutionalLayers[i].gradients_device);
 	}
-	//end = clock();
-	//printf("1 Elapsed time: %d\n", end - begin);
 
-	//begin = clock();
 	current_vector = fullyConnectedLayers[0].inputs_device;
 	cudaMemcpy2D(current_vector, current_tensor.matrixes_size * sizeof(float), current_tensor.data, current_tensor.pitch,
 		current_tensor.matrixes_size * sizeof(float), current_tensor.depth, cudaMemcpyDeviceToDevice);
-	//end = clock();
-	//printf("2 Elapsed time: %d\n", end - begin);
 
-	//begin = clock();
 	for (int i = 0; i < fully_connected_layers_count; i++)
 	{
 		current_vector = fullyConnectedLayers[i].forward(current_vector);
 	}
-	//end = clock();
-	//printf("3 Elapsed time: %d\n", end - begin);
 }
 
 void Network::correct(const int correct_result) {
@@ -153,15 +142,13 @@ void Network::free_memory() {
 
 	for (int i = 0; i < fully_connected_layers_count; i++)
 		fullyConnectedLayers[i].freeMemory();
-
+	cudaFree(fullyConnectedLayers[0].inputs_device);
+	cudaFree(intermediate_vector);
+	cudaFree(total_inputs);
 	convolutionalLayers.clear();
 	poolingLayers.clear();
 	fullyConnectedLayers.clear();
 	params_storage.reset();
-	cudaFree(current_tensor.data);
-	cudaFree(intermediate_vector);
-	cudaFree(current_vector);
-	cudaFree(total_inputs);
 }
 
 void Network::set_status(Status status) {

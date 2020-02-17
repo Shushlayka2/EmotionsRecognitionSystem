@@ -36,7 +36,7 @@ float* set_normal_random(const int arr_size, const int depth, size_t& pitch) {
 	cudaMalloc((void**)&arr_device, common_size * sizeof(float));
 
 	generate_normal_random_vector << <GRID_SIZE, BLOCK_SIZE >> > (arr_device, common_size, seed);
-	cudacall(cudaGetLastError());
+	//cudacall(cudaGetLastError());
 
 	if (depth == 1)
 		return arr_device;
@@ -59,7 +59,7 @@ float* set_repeatable_values(const int arr_size, const float custom_val) {
 	cudaMalloc((void**)&arr_device, arr_size * sizeof(float));
 
 	set_repeatable_values << <GRID_SIZE, BLOCK_SIZE >> > (arr_device, arr_size, custom_val);
-	cudacall(cudaGetLastError());
+	//cudacall(cudaGetLastError());
 
 	return arr_device;
 }

@@ -95,7 +95,7 @@ Tensor& PoolingLayer::forward(Tensor& input_matrixes, Tensor& prev_gradient_matr
 	dim3 threadsPerBlock = dim3(BLOCK_SIZE, BLOCK_SIZE, 1);
 	dim3 blocksPerGrid = dim3(outputs_devices.cols_count / BLOCK_SIZE + (outputs_devices.cols_count % BLOCK_SIZE == 0 ? 0 : 1), outputs_devices.rows_count / BLOCK_SIZE + (outputs_devices.rows_count % BLOCK_SIZE == 0 ? 0 : 1), outputs_devices.depth);
 	cuda_pooling << <blocksPerGrid, threadsPerBlock >> > (outputs_devices.data, prev_gradient_matrixes.data, prev_gradient_matrixes.pitch, input_matrixes.cols_count, input_matrixes.rows_count, outputs_devices.pitch, outputs_devices.cols_count, filter_size);
-	cudacall(cudaGetLastError());
+	//cudacall(cudaGetLastError());
 
 	cudaUnbindTexture(InputMatrixesRef);
 
@@ -109,7 +109,7 @@ void PoolingLayer::backward(Tensor& prev_gradient_matrixes) {
 	cudaBindTexture2D(0, GradientMatrixesRef, gradients_device.data, GradientMatrixesRef.channelDesc, gradients_device.matrixes_size, gradients_device.depth, gradients_device.pitch);
 
 	cuda_generate_gradients << <blocksPerGrid, threadsPerBlock >> > (prev_gradient_matrixes.data, prev_gradient_matrixes.pitch, prev_gradient_matrixes.cols_count, prev_gradient_matrixes.rows_count, gradients_device.cols_count, filter_size);
-	cudacall(cudaGetLastError());
+	//cudacall(cudaGetLastError());
 
 	cudaUnbindTexture(InputMatrixesRef);
 }
@@ -117,5 +117,5 @@ void PoolingLayer::backward(Tensor& prev_gradient_matrixes) {
 void PoolingLayer::freeMemory() {
 	
 	cudaFree(gradients_device.data);
-	cudaFree(inputs_device.data);
+	cudaFree(outputs_devices.data);
 }

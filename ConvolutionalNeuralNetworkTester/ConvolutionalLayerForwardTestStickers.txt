@@ -1,19 +1,13 @@
 Tensor& ConvolutionalLayer::forward(Tensor& input_matrixes) {
 	
 	inputs_device = input_matrixes;
-	unsigned int feature_map_depth = inputs_device.depth * filters_device.depth;
-	unsigned int feature_map_cols = inputs_device.cols_count - filters_device.cols_count + 1;
-	unsigned int feature_map_rows = inputs_device.rows_count - filters_device.rows_count + 1;
-
-	outputs_devices = Tensor(feature_map_rows, feature_map_cols, feature_map_depth);
-	cudaMallocPitch((void**)&outputs_devices.data, &outputs_devices.pitch, outputs_devices.matrixes_size * sizeof(float), outputs_devices.depth);
 
 	cudaBindTexture2D(0, MatrixesRef, inputs_device.data, MatrixesRef.channelDesc, inputs_device.matrixes_size, inputs_device.depth, inputs_device.pitch);
 	cudaBindTexture2D(0, FiltersRef, filters_device.data, FiltersRef.channelDesc, filters_device.matrixes_size, filters_device.depth, filters_device.pitch);
 
-	dim3 threadsPerBlock = dim3(10, 10, filters_device.depth);
-	dim3 blocksPerGrid = dim3(outputs_devices.cols_count / 10 + (outputs_devices.cols_count % 10 == 0 ? 0 : 1),
-		outputs_devices.rows_count / 10 + (outputs_devices.rows_count % 10 == 0 ? 0 : 1), inputs_device.depth);
+	dim3 threadsPerBlock = dim3(DOUBLE_BLOCK_SIZE, DOUBLE_BLOCK_SIZE, 1);
+	dim3 blocksPerGrid = dim3(outputs_devices.cols_count / DOUBLE_BLOCK_SIZE + (outputs_devices.cols_count % DOUBLE_BLOCK_SIZE == 0 ? 0 : 1),
+		outputs_devices.rows_count / DOUBLE_BLOCK_SIZE + (outputs_devices.rows_count % DOUBLE_BLOCK_SIZE == 0 ? 0 : 1), outputs_devices.depth);
 
 	//test
 	printf("Convolution Forward:\n");
@@ -54,7 +48,7 @@ Tensor& ConvolutionalLayer::forward(Tensor& input_matrixes) {
 	printf("\n");
 	free(inputs_host);
 
-	cuda_convolve << <blocksPerGrid, threadsPerBlock >> > (outputs_devices.data, biases_device, inputs_device.cols_count, outputs_devices.cols_count, outputs_devices.rows_count, outputs_devices.pitch, outputs_devices.depth, filters_device.cols_count);
+	cuda_convolve << <blocksPerGrid, threadsPerBlock >> > (outputs_devices.data, biases_device, inputs_device.cols_count, inputs_device.depth, outputs_devices.cols_count, outputs_devices.rows_count, outputs_devices.pitch, filters_device.cols_count);
 	cudaDeviceSynchronize();
 	cudacall(cudaGetLastError());
 
