@@ -5,7 +5,9 @@
 class ConvolutionalLayer {
 private:
 	Tensor filters_device;
+	Tensor f_velocity_device;
 	float* biases_device;
+	float* b_velocity_device;
 
 public:
 	Tensor inputs_device;

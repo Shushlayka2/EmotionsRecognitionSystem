@@ -133,7 +133,7 @@ namespace ConvolutionalNeuralNetworkTester
 			size_t pitch;
 
 			result_host = (float*)malloc(rows * cols * sizeof(float));
-			result_device = set_normal_random(cols, rows, pitch);
+			result_device = set_normal_random(cols, rows, pitch, 2, true);
 			cudaMemcpy2D(result_host, cols * sizeof(float), result_device, pitch, cols * sizeof(float), rows, cudaMemcpyDeviceToHost);
 
 			for (int i = 0; i < rows; i++)

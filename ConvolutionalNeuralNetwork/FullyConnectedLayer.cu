@@ -7,9 +7,10 @@
 #include "cuda_runtime.h"
 #include "device_launch_parameters.h"
 
-#define BLOCK_SIZE 256
+#define Y 0.0001f
+#define BLOCK_SIZE 512
 #define DOUBLE_BLOCK_SIZE 32
-#define LearningRate 0.0005f
+#define LearningRate 0.005f
 
 texture<float, 1, cudaReadModeElementType> InputsRef;
 texture<float, 1, cudaReadModeElementType> GradientsRef;
@@ -85,7 +86,7 @@ __global__ void cuda_correct_weights(float* weights, const int inp_count, const 
 
 	if (idx < inp_count && idy < out_count)
 	{
-		weights[idy * inp_count + idx] -= LearningRate * tex1Dfetch(InputsRef, idx) * tex1Dfetch(GradientsRef, idy);
+		weights[idy * inp_count + idx] = (1 - Y) * weights[idy * inp_count + idx] - LearningRate * tex1Dfetch(InputsRef, idx) * tex1Dfetch(GradientsRef, idy);
 	}
 }
 
@@ -95,7 +96,7 @@ __global__ void cuda_correct_biases(float* biases, const int out_count)
 
 	if (idx < out_count)
 	{
-		biases[idx] -= LearningRate * tex1Dfetch(GradientsRef, idx);
+		biases[idx] = (1 - Y) * biases[idx] - LearningRate * tex1Dfetch(GradientsRef, idx);
 	}
 }
 
@@ -113,7 +114,7 @@ FullyConnectedLayer::FullyConnectedLayer(int in_size, int out_size, Hub& params_
 
 	if (params_storage.get_status() == Status::Training)
 	{
-		weights_device = set_normal_random(in_size * out_size, 1, weights_pitch);
+		weights_device = set_normal_random(in_size * out_size, 1, weights_pitch, 2 / ((float)(in_size + out_size)), false);
 		biases_device = set_repeatable_values(out_size, 0.01f);
 	}
 	else
@@ -121,7 +122,6 @@ FullyConnectedLayer::FullyConnectedLayer(int in_size, int out_size, Hub& params_
 		weights_device = params_storage.get_params(in_size * out_size);
 		biases_device = params_storage.get_params(out_size);
 	}
-	
 }
 
 float* FullyConnectedLayer::forward(float* prev_layer_data) {
@@ -144,7 +144,7 @@ void FullyConnectedLayer::backward(float* prev_layer_gradients) {
 	dim3 blocksPerGrid = in_size / BLOCK_SIZE + (in_size % BLOCK_SIZE == 0 ? 0 : 1);
 
 	cuda_gr_to_der_mult << <blocksPerGrid, threadsPerBlock >> > (prev_layer_gradients, in_size);
-	//cudacall(cudaGetLastError());
+	cudacall(cudaGetLastError());
 
 	correct();
 
@@ -158,12 +158,12 @@ void FullyConnectedLayer::correct() {
 	dim3 blocksPerGrid = dim3(in_size / DOUBLE_BLOCK_SIZE + (in_size % DOUBLE_BLOCK_SIZE == 0 ? 0 : 1),
 		out_size / DOUBLE_BLOCK_SIZE + (out_size % DOUBLE_BLOCK_SIZE == 0 ? 0 : 1));
 	cuda_correct_weights << <blocksPerGrid, threadsPerBlock >> > (weights_device, in_size, out_size);
-	//cudacall(cudaGetLastError());
+	cudacall(cudaGetLastError());
 
 	threadsPerBlock = BLOCK_SIZE;
 	blocksPerGrid = out_size / BLOCK_SIZE + (out_size % BLOCK_SIZE == 0 ? 0 : 1);
 	cuda_correct_biases << <blocksPerGrid, threadsPerBlock >> > (biases_device, out_size);
-	//cudacall(cudaGetLastError());
+	cudacall(cudaGetLastError());
 }
 
 void FullyConnectedLayer::m_v_multiplication(float* matrix, float* vector, float* result_vector, cublasHandle_t& handle, cublasOperation_t trans) {
@@ -191,7 +191,7 @@ void FullyConnectedLayer::activate_sigmoid() {
 	dim3 threadsPerBlock = BLOCK_SIZE;
 	dim3 blocksPerGrid = out_size / BLOCK_SIZE + (out_size % BLOCK_SIZE == 0 ? 0 : 1);
 	cuda_sigmoid << <blocksPerGrid, threadsPerBlock >> > (outputs_device, out_size);
-	//cudacall(cudaGetLastError());
+	cudacall(cudaGetLastError());
 }
 
 void FullyConnectedLayer::activate_softmax(cublasHandle_t& handle) {
@@ -200,19 +200,19 @@ void FullyConnectedLayer::activate_softmax(cublasHandle_t& handle) {
 	dim3 blocksPerGrid = out_size / BLOCK_SIZE + (out_size % BLOCK_SIZE == 0 ? 0 : 1);
 
 	cuda_find_max << <1, 1>> > (outputs_device, max_device, out_size);
-	//cudacall(cudaGetLastError());
+	cudacall(cudaGetLastError());
 
 	cuda_exp_vector_generate << <blocksPerGrid, threadsPerBlock, out_size * sizeof(float) >> > (outputs_device, sum, max_device, out_size);
-	//cudacall(cudaGetLastError());
+	cudacall(cudaGetLastError());
 
 	cuda_softmax << <blocksPerGrid, threadsPerBlock >> > (outputs_device, max_device, sum, out_size);
-	//cudacall(cudaGetLastError());
+	cudacall(cudaGetLastError());
 }
 
 void FullyConnectedLayer::set_gradients(int correct_result) {
 
-	cuda_set_gradients << <1, 10 >> > (gradients_device, outputs_device, correct_result);
-	//cudacall(cudaGetLastError());
+	cuda_set_gradients << <1, out_size >> > (gradients_device, outputs_device, correct_result);
+	cudacall(cudaGetLastError());
 }
 
 int FullyConnectedLayer::get_result() {

@@ -14,7 +14,9 @@ private:
 	int in_size;
 	int out_size;
 	float* weights_device;
+	float* w_velocity_device;
 	float* biases_device;
+	float* b_velocity_device;
 	float network_error;
 
 	float* sum;
