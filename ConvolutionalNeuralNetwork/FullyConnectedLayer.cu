@@ -8,6 +8,7 @@
 #include "device_launch_parameters.h"
 
 #define Y 0.0001f
+#define GAM 0.9f
 #define BLOCK_SIZE 512
 #define DOUBLE_BLOCK_SIZE 32
 #define LearningRate 0.005f
@@ -79,29 +80,45 @@ __global__ void cuda_gr_to_der_mult(float* gradients, const int in_size)
 	}
 }
 
-__global__ void cuda_correct_weights(float* weights, const int inp_count, const int out_count)
+__global__ void cuda_correct_weights(float* weights, float* w_velocity, const int inp_count, const int out_count)
 {
 	int idx = blockIdx.x * blockDim.x + threadIdx.x;
 	int idy = blockIdx.y * blockDim.y + threadIdx.y;
 
 	if (idx < inp_count && idy < out_count)
 	{
-		weights[idy * inp_count + idx] = (1 - Y) * weights[idy * inp_count + idx] - LearningRate * tex1Dfetch(InputsRef, idx) * tex1Dfetch(GradientsRef, idy);
+		int pos = idy * inp_count + idx;
+		w_velocity[pos] = GAM * w_velocity[pos] - LearningRate * tex1Dfetch(InputsRef, idx) * tex1Dfetch(GradientsRef, idy);
+		weights[pos] = (1 - Y) * weights[idy * inp_count + idx] + w_velocity[pos];
 	}
 }
 
-__global__ void cuda_correct_biases(float* biases, const int out_count)
+__global__ void cuda_correct_biases(float* biases, float* b_velocity, const int out_count)
 {
 	int idx = blockIdx.x * blockDim.x + threadIdx.x;
 
 	if (idx < out_count)
 	{
-		biases[idx] = (1 - Y) * biases[idx] - LearningRate * tex1Dfetch(GradientsRef, idx);
+		b_velocity[idx] = GAM * b_velocity[idx] - LearningRate * tex1Dfetch(GradientsRef, idx);
+		biases[idx] = (1 - Y) * biases[idx] + b_velocity[idx];
+	}
+}
+
+__global__ void cuda_give_speed(float* weights, float* w_velocity, float* accelerated_weights, const int inp_count, const int out_count)
+{
+	int idx = blockIdx.x * blockDim.x + threadIdx.x;
+	int idy = blockIdx.y * blockDim.y + threadIdx.y;
+
+	if (idx < inp_count && idy < out_count)
+	{
+		int pos = idy * inp_count + idx;
+		accelerated_weights[pos] = weights[pos] + GAM * w_velocity[pos];
 	}
 }
 
 FullyConnectedLayer::FullyConnectedLayer(int in_size, int out_size, Hub& params_storage, ActivationType type) : inputs_device(nullptr) {
 	
+	size_t pitch;
 	network_error = 0.0f;
 	this->in_size = in_size;
 	this->out_size = out_size;
@@ -112,10 +129,14 @@ FullyConnectedLayer::FullyConnectedLayer(int in_size, int out_size, Hub& params_
 	cudaMalloc((void**)&max_device, sizeof(float));
 	cublasCreate(&handle);
 
+	w_velocity_device = set_repeatable_values(in_size * out_size, 1, pitch, 0.0f, false);
+	cudaMalloc((void**)&accelerated_w_device, in_size * out_size * sizeof(float));
+	b_velocity_device = set_repeatable_values(out_size, 1, pitch, 0.0f, false);
+
 	if (params_storage.get_status() == Status::Training)
 	{
-		weights_device = set_normal_random(in_size * out_size, 1, weights_pitch, 2 / ((float)(in_size + out_size)), false);
-		biases_device = set_repeatable_values(out_size, 0.01f);
+		weights_device = set_normal_random(in_size * out_size, 1, pitch, 2 / ((float)(in_size + out_size)), false);
+		biases_device = set_repeatable_values(out_size, 1, pitch, 0.01f, false);
 	}
 	else
 	{
@@ -138,7 +159,8 @@ void FullyConnectedLayer::backward(float* prev_layer_gradients) {
 	cudaBindTexture(0, InputsRef, inputs_device, in_size * sizeof(float));
 	cudaBindTexture(0, GradientsRef, gradients_device, out_size * sizeof(float));
 
-	m_v_multiplication(weights_device, gradients_device, prev_layer_gradients, handle, CUBLAS_OP_N);
+	give_speed(weights_device, w_velocity_device, accelerated_w_device);
+	m_v_multiplication(accelerated_w_device, gradients_device, prev_layer_gradients, handle, CUBLAS_OP_N);
 
 	dim3 threadsPerBlock = BLOCK_SIZE;
 	dim3 blocksPerGrid = in_size / BLOCK_SIZE + (in_size % BLOCK_SIZE == 0 ? 0 : 1);
@@ -157,12 +179,21 @@ void FullyConnectedLayer::correct() {
 	dim3 threadsPerBlock = dim3(DOUBLE_BLOCK_SIZE, DOUBLE_BLOCK_SIZE);
 	dim3 blocksPerGrid = dim3(in_size / DOUBLE_BLOCK_SIZE + (in_size % DOUBLE_BLOCK_SIZE == 0 ? 0 : 1),
 		out_size / DOUBLE_BLOCK_SIZE + (out_size % DOUBLE_BLOCK_SIZE == 0 ? 0 : 1));
-	cuda_correct_weights << <blocksPerGrid, threadsPerBlock >> > (weights_device, in_size, out_size);
+	cuda_correct_weights << <blocksPerGrid, threadsPerBlock >> > (weights_device, w_velocity_device, in_size, out_size);
 	cudacall(cudaGetLastError());
 
 	threadsPerBlock = BLOCK_SIZE;
 	blocksPerGrid = out_size / BLOCK_SIZE + (out_size % BLOCK_SIZE == 0 ? 0 : 1);
-	cuda_correct_biases << <blocksPerGrid, threadsPerBlock >> > (biases_device, out_size);
+	cuda_correct_biases << <blocksPerGrid, threadsPerBlock >> > (biases_device, b_velocity_device, out_size);
+	cudacall(cudaGetLastError());
+}
+
+void FullyConnectedLayer::give_speed(float* weights_device, float* w_velocity_device, float* accelerated_w_device) {
+
+	dim3 threadsPerBlock = dim3(DOUBLE_BLOCK_SIZE, DOUBLE_BLOCK_SIZE);
+	dim3 blocksPerGrid = dim3(in_size / DOUBLE_BLOCK_SIZE + (in_size % DOUBLE_BLOCK_SIZE == 0 ? 0 : 1),
+		out_size / DOUBLE_BLOCK_SIZE + (out_size % DOUBLE_BLOCK_SIZE == 0 ? 0 : 1));
+	cuda_give_speed << <blocksPerGrid, threadsPerBlock >> > (weights_device, w_velocity_device, accelerated_w_device, in_size, out_size);
 	cudacall(cudaGetLastError());
 }
 
@@ -248,7 +279,10 @@ void FullyConnectedLayer::freeMemory() {
 	cudaFree(max_device);
 	cudaFree(gradients_device);
 	cudaFree(weights_device);
+	cudaFree(w_velocity_device);
+	cudaFree(accelerated_w_device);
 	cudaFree(biases_device);
+	cudaFree(b_velocity_device);
 	cudaFree(outputs_device);
 	cublasDestroy(handle);
 }

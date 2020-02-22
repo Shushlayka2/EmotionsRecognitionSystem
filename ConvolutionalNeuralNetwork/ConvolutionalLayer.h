@@ -6,8 +6,11 @@ class ConvolutionalLayer {
 private:
 	Tensor filters_device;
 	Tensor f_velocity_device;
+	Tensor accelerated_f_device;
 	float* biases_device;
 	float* b_velocity_device;
+
+	void give_speed(Tensor& filters_device, Tensor& f_velocity_device, Tensor& accelerated_f_device);
 
 public:
 	Tensor inputs_device;

@@ -65,15 +65,25 @@ float* set_normal_random(const int arr_size, const int depth, size_t& pitch, con
 	return result_device;
 }
 
-float* set_repeatable_values(const int arr_size, const float custom_val) {
+float* set_repeatable_values(const int arr_size, const int depth, size_t& pitch, const float custom_val, bool is2dim) {
 
+	int common_size = arr_size * depth;
 	float* arr_device;
-	const int GRID_SIZE = arr_size / BLOCK_SIZE + (arr_size % BLOCK_SIZE != 0 ? 1 : 0);
+	const int GRID_SIZE = common_size / BLOCK_SIZE + (common_size % BLOCK_SIZE != 0 ? 1 : 0);
 
-	cudaMalloc((void**)&arr_device, arr_size * sizeof(float));
+	cudaMalloc((void**)&arr_device, common_size * sizeof(float));
 
-	set_repeatable_values << <GRID_SIZE, BLOCK_SIZE >> > (arr_device, arr_size, custom_val);
+	set_repeatable_values << <GRID_SIZE, BLOCK_SIZE >> > (arr_device, common_size, custom_val);
 	cudacall(cudaGetLastError());
 
-	return arr_device;
+	if (is2dim)
+	{
+		float* result_device;
+		cudaMallocPitch((void**)&result_device, &pitch, arr_size * sizeof(float), depth);
+		cudaMemcpy2D(result_device, pitch, arr_device, arr_size * sizeof(float), arr_size * sizeof(float), depth, cudaMemcpyDeviceToDevice);
+		cudaFree(arr_device);
+		return result_device;
+	}
+	else
+		return arr_device;
 }

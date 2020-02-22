@@ -5,5 +5,5 @@ pooling_filters_size = 2
 fully_connected_layers_count = 2
 convolutional_layers_filters_count = 3
 fully_connected_layers_neurons_count = 48 10
-epochs_count = 100
-repetitions_count = 1
+epochs_count = 3
+repetitions_count = 2

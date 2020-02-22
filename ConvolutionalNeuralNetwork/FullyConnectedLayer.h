@@ -15,14 +15,13 @@ private:
 	int out_size;
 	float* weights_device;
 	float* w_velocity_device;
+	float* accelerated_w_device;
 	float* biases_device;
 	float* b_velocity_device;
 	float network_error;
 
 	float* sum;
 	float* max_device;
-
-	size_t weights_pitch;
 	cublasHandle_t handle;
 
 	void correct();
@@ -30,6 +29,7 @@ private:
 	void activate(cublasHandle_t& handle);
 	void activate_sigmoid();
 	void activate_softmax(cublasHandle_t& handle);
+	void give_speed(float* weights_device, float* w_velocity_device, float* accelerated_w_device);
 	void m_v_multiplication(float* matrix, float* vector, float* result_vector, cublasHandle_t& handle, cublasOperation_t trans = CUBLAS_OP_T);
 
 public:

@@ -7,9 +7,10 @@
 #include "cuda_runtime.h"
 #include "device_launch_parameters.h"
 
+#define GAM 0.9f
 #define BLOCK_SIZE 256
 #define DOUBLE_BLOCK_SIZE 32
-#define LearningRate 0.051f
+#define LearningRate 0.005f
 #define MAX_ELEMENTS_COUNT 1024
 #define SUM_STRIDE 512
 
@@ -76,7 +77,7 @@ __global__ void cuda_cross_correlation(float* prev_gradients, const int prev_gr_
 	}
 }
 
-__global__ void cuda_correct_filters(float* filters, const int fl_size, size_t fl_pitch, const int gr_cols, const int gr_rows, const int gr_count, const int in_cols, const int in_count)
+__global__ void cuda_correct_filters(float* filters, float* filters_velocity, const int fl_size, size_t fl_pitch, const int gr_cols, const int gr_rows, const int gr_count, const int in_cols, const int in_count)
 {
 	int x = threadIdx.x;
 	int y = threadIdx.y;
@@ -96,8 +97,6 @@ __global__ void cuda_correct_filters(float* filters, const int fl_size, size_t f
 	if (x < gr_cols && y < gr_rows)
 	{
 		int matrix_position = (y + y_block) * in_cols + (x + x_block);
-		float* filter_matrix_start = (float*)((char*)filters + z_block * fl_pitch);
-
 		s_deltas[gr_position] = (tex2D(OutputsRef, gr_position, gr_num) > 0.0f) * tex2D(MatrixesRef, matrix_position, in_num) * tex2D(FiltersRef, gr_position, gr_num);
 	}
 
@@ -111,11 +110,12 @@ __global__ void cuda_correct_filters(float* filters, const int fl_size, size_t f
 	if (gr_position == 0)
 	{
 		float* filter_matrix_start = (float*)((char*)filters + z_block * fl_pitch);
-		filter_matrix_start[filter_position] -= LearningRate * s_deltas[0];
+		float* filter_velocity_matrix_start = (float*)((char*)filters_velocity + z_block * fl_pitch);
+		filter_matrix_start[filter_position] += GAM * filter_velocity_matrix_start[filter_position] - LearningRate * s_deltas[0];
 	}
 }
 
-__global__ void cuda_correct_biases(float* biases, const int gr_cols, const int gr_rows)
+__global__ void cuda_correct_biases(float* biases, float* biases_velocity, const int gr_cols, const int gr_rows)
 {
 	int x = threadIdx.x;
 	int y = threadIdx.y;
@@ -136,27 +136,50 @@ __global__ void cuda_correct_biases(float* biases, const int gr_cols, const int 
 	}
 	if (gr_position == 0)
 	{
-		biases[z] -= LearningRate * s_deltas[0];
+		biases_velocity[z] = GAM * biases_velocity[z] - LearningRate * s_deltas[0];
+		biases[z] += biases_velocity[z];
+	}
+}
+
+__global__ void cuda_give_speed(float* filters, float* f_velocity, float* accelerated_filters, const int filter_size, size_t fl_pitch)
+{
+	int x = blockDim.x * blockIdx.x + threadIdx.x;
+	int y = blockDim.y * blockIdx.y + threadIdx.y;
+	int z = blockIdx.z;
+
+	if (x < filter_size && y < filter_size)
+	{
+		int filter_position = y * filter_size + x;
+		float* filter_matrix_start = (float*)((char*)filters + z * fl_pitch);
+		float* filter_velocity_matrix_start = (float*)((char*)f_velocity + z * fl_pitch);
+		float* accelerated_filter_matrix_start = (float*)((char*)accelerated_filters + z * fl_pitch);
+
+		accelerated_filter_matrix_start[filter_position] = filter_matrix_start[filter_position] + GAM * filter_velocity_matrix_start[filter_position];
 	}
 }
 
 ConvolutionalLayer::ConvolutionalLayer(const int filters_size, const int filters_count, const int inputs_depth, const int outputs_size, Hub& params_storage) {
 	
+	size_t pitch;
 	int filter_depth = inputs_depth * filters_count;
 	filters_device = Tensor(filters_size, filters_size, filter_depth);
 	f_velocity_device = Tensor(filters_size, filters_size, filter_depth);
+	accelerated_f_device = Tensor(filters_size, filters_size, filter_depth);
 	gradients_device = Tensor(outputs_size, outputs_size, filters_count);
 	cudaMallocPitch((void**)&gradients_device.data, &gradients_device.pitch, gradients_device.matrixes_size * sizeof(float), gradients_device.depth);
 
 	outputs_devices = Tensor(outputs_size, outputs_size, filters_count);
 	cudaMallocPitch((void**)&outputs_devices.data, &outputs_devices.pitch, outputs_devices.matrixes_size * sizeof(float), outputs_devices.depth);
+	
+	f_velocity_device.data = set_repeatable_values(filters_device.matrixes_size, filters_device.depth, filters_device.pitch, 0.0f, true);
+	cudaMallocPitch((void**)&accelerated_f_device.data, &accelerated_f_device.pitch, accelerated_f_device.matrixes_size * sizeof(float), accelerated_f_device.depth);
+
+	b_velocity_device = set_repeatable_values(filters_count, 1, pitch, 0.0f, false);
 
 	if (params_storage.get_status() == Status::Training)
 	{
-		filters_device.data = set_normal_random(filters_size * filters_size, filter_depth, filters_device.pitch, 2 / ((float)(28 * 28 * inputs_depth)), true);
-		f_velocity_device = set_repeatable_values(filters_count, 0.0f);
-		biases_device = set_repeatable_values(filters_count, 0.01f);
-		b_velocity_device = set_repeatable_values(filters_count, 0.0f);
+		filters_device.data = set_normal_random(filters_device.matrixes_size, filters_device.depth, filters_device.pitch, 2 / ((float)(28 * 28 * inputs_depth)), true);
+		biases_device = set_repeatable_values(filters_count, 1, pitch, 0.01f, false);
 	}
 	else
 	{
@@ -187,6 +210,7 @@ Tensor& ConvolutionalLayer::forward(Tensor& input_matrixes) {
 
 void ConvolutionalLayer::backward(Tensor& prev_gradient_matrixes) {
 
+	give_speed(filters_device, f_velocity_device, accelerated_f_device);
 	cudaBindTexture2D(0, FiltersRef, filters_device.data, FiltersRef.channelDesc, filters_device.matrixes_size, filters_device.depth, filters_device.pitch);
 	cudaBindTexture2D(0, MatrixesRef, gradients_device.data, MatrixesRef.channelDesc, gradients_device.matrixes_size, gradients_device.depth, gradients_device.pitch);
 
@@ -211,18 +235,27 @@ void ConvolutionalLayer::correct() {
 	dim3 threadsPerBlock = dim3(DOUBLE_BLOCK_SIZE, DOUBLE_BLOCK_SIZE, 1);
 	dim3 blocksPerGrid = dim3(filters_device.cols_count, filters_device.rows_count, filters_device.depth);
 
-	cuda_correct_filters << <blocksPerGrid, threadsPerBlock, MAX_ELEMENTS_COUNT * sizeof(float) >> > (filters_device.data, filters_device.cols_count, filters_device.pitch, gradients_device.cols_count, gradients_device.rows_count, gradients_device.depth, inputs_device.cols_count, inputs_device.depth);
+	cuda_correct_filters << <blocksPerGrid, threadsPerBlock, MAX_ELEMENTS_COUNT * sizeof(float) >> > (filters_device.data, f_velocity_device.data, filters_device.cols_count, filters_device.pitch, gradients_device.cols_count, gradients_device.rows_count, gradients_device.depth, inputs_device.cols_count, inputs_device.depth);
 	cudacall(cudaGetLastError());
 
 	threadsPerBlock = dim3(DOUBLE_BLOCK_SIZE, DOUBLE_BLOCK_SIZE, 1);
 	blocksPerGrid = dim3(1, 1, gradients_device.depth);
 	
-	cuda_correct_biases << <blocksPerGrid, threadsPerBlock, MAX_ELEMENTS_COUNT * sizeof(float) >> > (biases_device, gradients_device.cols_count, gradients_device.rows_count);
+	cuda_correct_biases << <blocksPerGrid, threadsPerBlock, MAX_ELEMENTS_COUNT * sizeof(float) >> > (biases_device, b_velocity_device, gradients_device.cols_count, gradients_device.rows_count);
 	cudacall(cudaGetLastError());
 
 	cudaUnbindTexture(FiltersRef);
 	cudaUnbindTexture(MatrixesRef);
 	cudaUnbindTexture(OutputsRef);
+}
+
+void ConvolutionalLayer::give_speed(Tensor& filters_device, Tensor& f_velocity_device, Tensor& accelerated_f_device) {
+
+	dim3 threadsPerBlock = dim3(DOUBLE_BLOCK_SIZE, DOUBLE_BLOCK_SIZE, 1);
+	dim3 blocksPerGrid = dim3(filters_device.cols_count / DOUBLE_BLOCK_SIZE + (filters_device.cols_count % DOUBLE_BLOCK_SIZE == 0 ? 0 : 1),
+		filters_device.rows_count / DOUBLE_BLOCK_SIZE + (filters_device.rows_count % DOUBLE_BLOCK_SIZE == 0 ? 0 : 1), filters_device.depth);
+	
+	cuda_give_speed << <blocksPerGrid, threadsPerBlock >> > (filters_device.data, f_velocity_device.data, accelerated_f_device.data, filters_device.cols_count, filters_device.pitch);
 }
 
 void ConvolutionalLayer::save_params(Hub& params_storage) {
@@ -234,7 +267,10 @@ void ConvolutionalLayer::save_params(Hub& params_storage) {
 void ConvolutionalLayer::freeMemory() {
 
 	cudaFree(filters_device.data);
+	cudaFree(f_velocity_device.data);
+	cudaFree(accelerated_f_device.data);
 	cudaFree(gradients_device.data);
 	cudaFree(outputs_devices.data);
 	cudaFree(biases_device);
+	cudaFree(b_velocity_device);
 }
