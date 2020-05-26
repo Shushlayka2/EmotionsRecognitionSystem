@@ -4,17 +4,13 @@
 #include "DigitImageLoadingService.h"
 
 void Trainer::train(Network& network, ConfigHandler configurationHandler) {
-	
-	//test
-	/*int correct_count = 0;
-	int number_of_test_images;
-	float* testing_dataset = DigitImageLoadingService::read_mnist_images("t10k-images.idx3-ubyte", number_of_test_images);
-	int* testing_labels = DigitImageLoadingService::read_mnist_labels("t10k-labels.idx1-ubyte", number_of_test_images);*/
 
 	int number_of_images;
+	int custom_number_of_images = configurationHandler.Value("number_of_images");
 	float* training_dataset = DigitImageLoadingService::read_mnist_images("train-images.idx3-ubyte", number_of_images);
 	int* training_labels = DigitImageLoadingService::read_mnist_labels("train-labels.idx1-ubyte", number_of_images);
 
+	number_of_images = custom_number_of_images == -1 ? number_of_images : custom_number_of_images;
 	int repetitions_count = configurationHandler.Value("repetitions_count");
 	float epochs_count = configurationHandler.Value("epochs_count");
 
@@ -33,7 +29,9 @@ void Trainer::train(Network& network, ConfigHandler configurationHandler) {
 		printf("%d epoch:\n\tElapsed time: %f\n", i, double(end - begin) / CLOCKS_PER_SEC);
 
 		//test
-		/*for (int j = 0; j < 1000; j++)
+		int correct_count = 0;
+		int number_of_test_images = configurationHandler.Value("number_of_test_images");
+		for (int j = 0; j < number_of_test_images; j++)
 		{
 			network.set_inputs(j);
 			network.run();
@@ -43,8 +41,8 @@ void Trainer::train(Network& network, ConfigHandler configurationHandler) {
 				correct_count++;
 			network.calc_error(training_labels[j]);
 		}
-		printf("\tNetork error: %f\n\tCorrect matches count: %d of %d\n", network.get_common_error(1000), correct_count, 1000);
-		correct_count = 0.0f;*/
+		printf("\tNetork error: %f\n\tCorrect matches count: %d of %d\n", network.get_common_error(number_of_test_images), correct_count, number_of_test_images);
+		correct_count = 0.0f;
 	}
 
 	save_params(network);
