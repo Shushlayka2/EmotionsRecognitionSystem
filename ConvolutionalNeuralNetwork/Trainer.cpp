@@ -28,10 +28,10 @@ void Trainer::train(Network& network, ConfigHandler configurationHandler) {
 		clock_t end = clock();
 		printf("%d epoch:\n\tElapsed time: %f\n", i, double(end - begin) / CLOCKS_PER_SEC);
 
-		//test
+		//validation
 		int correct_count = 0;
-		int number_of_test_images = configurationHandler.Value("number_of_test_images");
-		for (int j = 0; j < number_of_test_images; j++)
+		int number_of_validation_images = configurationHandler.Value("number_of_validation_images");
+		for (int j = 0; j < number_of_validation_images; j++)
 		{
 			network.set_inputs(j);
 			network.run();
@@ -41,7 +41,7 @@ void Trainer::train(Network& network, ConfigHandler configurationHandler) {
 				correct_count++;
 			network.calc_error(training_labels[j]);
 		}
-		printf("\tNetork error: %f\n\tCorrect matches count: %d of %d\n", network.get_common_error(number_of_test_images), correct_count, number_of_test_images);
+		printf("\tNetork error: %f\n\tCorrect matches count: %d of %d\n", network.get_common_error(number_of_validation_images), correct_count, number_of_validation_images);
 		correct_count = 0.0f;
 	}
 
